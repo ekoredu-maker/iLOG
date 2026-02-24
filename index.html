@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>초등담임학급통합관리프로그램-아이_log (v9.6)</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#34495e">
+    <link rel="icon" href="icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon.png">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+    
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Pretendard', sans-serif; overflow: hidden; }
+        /* 로그인 오버레이 유지 */
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2c3e50; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
+        .login-box { background: white; padding: 40px; border-radius: 15px; width: 400px; text-align: center; color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .wrapper { display: flex; width: 100%; height: 100vh; }
+        
+        /* [수정] 모바일 반응형 사이드바 */
+        .sidebar { width: 260px; min-width: 260px; background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%); color: white; display: flex; flex-direction: column; transition: 0.3s; }
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; left: -260px; height: 100%; z-index: 1050; }
+            .sidebar.show { left: 0; }
+            .main-content { margin-left: 0; }
+            #mobile-menu-btn { display: block !important; }
+        }
+        #mobile-menu-btn { display: none; font-size: 1.5rem; cursor: pointer; color: #333; margin-right: 15px; }
+
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; cursor: pointer; }
+        .sidebar .nav-link.active { background-color: rgba(255,255,255,0.1); border-left: 4px solid #3498db; color: #fff; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .page-header { background: white; padding: 15px 30px; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
+        .content-area { padding: 30px; flex: 1; overflow-y: auto; }
+        .page-section { display: none; }
+        .page-section.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card { border: none; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .cursor-pointer { cursor: pointer; }
+        .table-hover tbody tr:hover { background-color: #f1f3f5; }
+        .draggable-item { cursor: grab; user-select: none; }
+        .draggable-item:active { cursor: grabbing; opacity: 0.7; }
+        td.droppable { transition: background 0.2s; }
+        td.droppable:hover { background-color: #e9ecef !important; }
+        .quick-link { transition: transform 0.2s; }
+        .quick-link:hover { transform: translateY(-3px); }
+
+        /* 우클릭 메뉴 */
+        #context-menu {
+            display: none;
+            position: absolute;
+            z-index: 10000;
+            width: 150px;
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        #context-menu .item { padding: 8px 12px; cursor: pointer; font-size: 14px; color: #333; }
+        #context-menu .item:hover { background-color: #f1f3f5; }
+        #context-menu .item.delete { color: #dc3545; }
+    </style>
+</head>
+<body>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 11000">
+  <div id="liveToast" class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toast-msg">처리되었습니다.</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<div id="context-menu">
+    <div class="item" id="ctx-edit"><i class="fas fa-edit me-2"></i>내용 수정</div>
+    <div class="item" id="ctx-eval"><i class="fas fa-star me-2"></i>평가 등록</div>
+    <div class="item delete" id="ctx-delete"><i class="fas fa-trash-alt me-2"></i>삭제</div>
+</div>
+
+<div id="login-overlay">
+    <div class="login-box">
+        <h3 class="fw-bold mb-4"><i class="fas fa-school me-2 text-primary"></i>아이_log v9.6</h3>
+        <p class="text-muted small mb-4">선생님의 하루를 응원합니다!</p>
+        <div class="mb-3"><input type="password" id="login-password" class="form-control form-control-lg text-center" placeholder="비밀번호 (초기: 1234)"></div>
+        <button class="btn btn-primary w-100 btn-lg" id="login-btn">로그인</button>
+        <p class="text-danger mt-3 small" id="login-msg" style="display:none;"></p>
+        <div class="mt-3 text-muted small">최초 사용 시 [기본설정] 탭에서<br>비밀번호를 변경해주세요.</div>
+    </div>
+    <div class="mt-4 text-white-50 small">2026@박주가리 교감| 모든책임은 사용자에게 있습니다.</div>
+  <div class="mt-4 text-white-50 small">제천의 선생님들에게만 무상사용 권리가 있습니다.</div>
+</div>
+
+<div class="wrapper">
+    <div class="sidebar p-3">
+        <div class="mb-4 text-center">
+            <h5 class="fw-bold mb-0"><i class="fas fa-school me-2"></i>아이_log v9.6</h5>
+            <small class="text-white-50">Excel Edition</small>
+        </div>
+        <ul class="nav nav-pills flex-column mb-auto" id="menu-list">
+            <li class="nav-item"><a class="nav-link active" data-target="dashboard"><i class="fas fa-home"></i> 대시보드</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="scheduler-modal-trigger"><i class="fas fa-calendar-alt"></i> 통합스케줄러</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="curriculum"><i class="fas fa-book"></i> 교육과정운영(기초)</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="annual-plan"><i class="fas fa-calendar-check"></i> 연간활동관리</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="students"><i class="fas fa-user-graduate"></i> 학생생활관리</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="incidents"><i class="fas fa-user-shield"></i> 학생사안관리</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="experiential"><i class="fas fa-plane-departure"></i> 교외체험학습</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="evaluation"><i class="fas fa-star"></i> 학생평가관리</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="stats"><i class="fas fa-chart-bar"></i> 통계/기록</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="tasks"><i class="fas fa-tasks"></i> 교원업무관리</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="settings"><i class="fas fa-cog"></i> 기본설정</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="data-manage"><i class="fas fa-database"></i> 데이터관리</a></li>
+        </ul>
+        <hr>
+        <button class="btn btn-outline-light w-100 mb-2 btn-sm" id="lock-btn"><i class="fas fa-lock me-1"></i>잠금</button>
+        <div class="text-center small text-white-50">2026@박주가리 교감</div>
+    </div>
+
+    <div class="main-content">
+        <header class="page-header">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-bars" id="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('show')"></i>
+                <h4 class="mb-0 fw-bold" id="header-title">대시보드</h4>
+            </div>
+            <div class="d-flex align-items-center text-secondary"><i class="far fa-clock me-2"></i><span id="clock" class="fw-bold">Loading...</span></div>
+        </header>
+
+        <div class="content-area">
+            <div id="dashboard" class="page-section active">
+                <div class="row g-4 mb-4">
+                     <div class="col-12">
+                        <div class="card shadow-sm"><div class="card-body">
+                            <h6 class="text-muted mb-3 fw-bold">충북교육청 바로가기 & 빠른 실행</h6>
+                            <div class="d-flex gap-3 flex-wrap" id="quick-links-container">
+                                <a href="https://cbe.eduptl.kr/bpm_lgn_lg00_001.do" target="_blank" class="btn btn-outline-primary quick-link"><i class="fas fa-laptop-house me-2"></i>업무포털</a>
+                                <a href="https://cbe.neis.go.kr/" target="_blank" class="btn btn-outline-success quick-link"><i class="fas fa-users-cog me-2"></i>나이스(4세대)</a>
+                                <a href="https://klef.cbe.go.kr" target="_blank" class="btn btn-outline-danger quick-link"><i class="fas fa-calculator me-2"></i>K-에듀파인</a>
+                                <button class="btn btn-light border quick-link text-muted" onclick="addCustomLink()"><i class="fas fa-plus me-1"></i>추가</button>
+                            </div>
+                        </div></div>
+                    </div>
+                    <div class="col-md-4"><div class="card p-3 border-start border-5 border-primary"><div class="d-flex justify-content-between"><div><h6 class="text-muted">오늘 수업</h6><h3 class="fw-bold" id="unprocessed-count">0교시</h3></div><i class="fas fa-book-open fs-1 text-primary opacity-25"></i></div></div></div>
+                    <div class="col-md-4"><div class="card p-3 border-start border-5 border-danger"><div class="d-flex justify-content-between"><div><h6 class="text-muted">오늘 마감 업무</h6><h3 class="fw-bold" id="today-task-count">0건</h3></div><i class="fas fa-exclamation-triangle fs-1 text-danger opacity-25"></i></div></div></div>
+                    <div class="col-md-4"><div class="card p-3 border-start border-5 border-success"><div class="d-flex justify-content-between"><div><h6 class="text-muted">시스템</h6><h5 class="fw-bold text-success">정상 운영중</h5></div><i class="fas fa-check-circle fs-1 text-success opacity-25"></i></div></div></div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-12"><div class="card shadow-sm"><div class="card-header bg-white d-flex justify-content-between align-items-center py-3"><h5 class="mb-0 fw-bold"><i class="fas fa-calendar-day me-2 text-primary"></i>오늘의 시간표</h5><span class="badge bg-primary rounded-pill" id="today-display">오늘 날짜</span></div><div class="card-body"><div id="today-schedule-container" class="row g-3"><div class="col-12 text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-3"></i><br>로딩 중...</div></div></div></div></div>
+                </div>
+            </div>
+
+            <div id="curriculum" class="page-section">
+                <div class="container-fluid"><h4 class="mb-4 fw-bold">교육과정 운영 (기초)</h4>
+                    <ul class="nav nav-tabs mb-4">
+                        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#subject-pane">과목 관리</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#timetable-pane" id="tab-timetable">주간 기초 시간표</a></li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="subject-pane">
+                            <div class="row g-4">
+                                <div class="col-md-8"><div class="card h-100 shadow-sm"><div class="card-header bg-white d-flex justify-content-between"><span class="fw-bold">등록된 과목</span><span class="badge bg-secondary" id="subject-count">0개</span></div><div class="card-body p-0 table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>과목명</th><th>단축명</th><th>시수</th><th>관리</th></tr></thead><tbody id="subject-list-body"></tbody></table></div></div></div>
+                                <div class="col-md-4"><div class="card shadow-sm"><div class="card-header bg-white fw-bold">과목 추가</div><div class="card-body"><input type="text" id="subName" class="form-control mb-2" placeholder="과목명"><input type="text" id="subShortName" class="form-control mb-2" placeholder="단축명"><input type="number" id="subHours" class="form-control mb-2" placeholder="시수" value="0"><button class="btn btn-primary w-100 mb-2" id="add-subject-btn">추가</button><button class="btn btn-secondary w-100" id="add-default-subject-btn">기본과목(2022개정) 복구</button></div></div></div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="timetable-pane">
+                            <div class="row g-4">
+                                <div class="col-md-3"><div class="card shadow-sm h-100"><div class="card-header bg-white fw-bold text-center">과목 팔레트 (드래그)</div><div class="card-body bg-light overflow-auto" id="draggable-subjects" style="max-height: 500px;"></div></div></div>
+                                <div class="col-md-9"><div class="card shadow-sm h-100"><div class="card-header bg-white d-flex justify-content-between"><span class="fw-bold">주간 기초 시간표</span><div><button class="btn btn-sm btn-outline-danger me-3" id="clear-timetable-btn">초기화</button><button class="btn btn-sm btn-primary" id="save-timetable-btn">저장</button></div></div><div class="card-body p-0"><table class="table table-bordered text-center align-middle mb-0" style="height:500px;"><thead class="table-light"><tr><th>교시</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th></tr></thead><tbody id="timetable-grid"></tbody></table></div></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="annual-plan" class="page-section">
+                <div class="container-fluid"><h4 class="mb-4 fw-bold">연간 활동 관리</h4>
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="card shadow-sm mb-3">
+                                <div class="card-header bg-white fw-bold">행사/일정 등록</div>
+                                <div class="card-body">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col"><label class="small text-muted">시작일</label><input type="date" id="eventStartDate" class="form-control"></div>
+                                        <div class="col"><label class="small text-muted">종료일</label><input type="date" id="eventEndDate" class="form-control"></div>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="eventSameDay">
+                                        <label class="form-check-label small" for="eventSameDay">종료일 동일 (당일 행사)</label>
+                                    </div>
+                                    <input type="text" id="eventTitle" class="form-control mb-2" placeholder="행사명 (예: 여름방학)">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="eventHoliday">
+                                        <label class="form-check-label text-danger fw-bold">휴업일 (수업 없음)</label>
+                                    </div>
+                                    <button class="btn btn-primary w-100 mb-3" id="add-event-btn">등록</button>
+                                    <hr>
+                                    <textarea id="eventBatchText" class="form-control mb-2" placeholder="날짜(또는 시작~종료),행사명,O(휴업시)&#10;2026-07-20,여름방학,O" style="height:80px;"></textarea><button class="btn btn-secondary w-100 btn-sm" id="batch-event-btn">일괄 등록</button>
+
+                                    <div class="mt-2">
+                                        <input type="file" id="school-event-excel-file" class="form-control form-control-sm" accept=".xlsx,.xls">
+                                        <button class="btn btn-outline-success w-100 btn-sm mt-1" id="school-event-excel-btn">
+                                            <i class="fas fa-file-excel me-1"></i>엑셀로 학사일정 업로드
+                                        </button>
+                                        <div class="form-text">엑셀 1행 헤더: [날짜, 행사명, 휴업(선택)] (날짜는 YYYY-MM-DD 또는 엑셀 날짜)</div>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="card shadow-sm mb-3">
+                                <div class="card-header bg-white fw-bold">연간 시간표 생성</div>
+                                <div class="card-body">
+                                    <p class="small text-muted mb-2 text-danger fw-bold"><i class="fas fa-exclamation-triangle me-1"></i>휴업일은 시간표에서 자동 삭제됩니다.</p>
+                                    <button class="btn btn-success w-100 mb-2" id="generate-annual-btn">자동 생성 (시수 기반)</button>
+                                </div>
+                            </div>
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-white fw-bold">지도 계획 관리</div>
+                                <div class="card-body">
+                                    <button class="btn btn-outline-primary w-100 mb-2" onclick="downloadSubjectTemplate()">📄 작성 서식 다운로드 (Excel)</button>
+                                    <hr>
+                                    <div class="mb-2">
+                                        <label class="small text-muted">과목 선택 후 엑셀 업로드</label>
+                                        <select id="upload-subject-select" class="form-select mb-1"></select>
+                                        <input type="file" id="subject-plan-file" class="form-control mb-1" accept=".xlsx, .xls">
+                                        <button class="btn btn-primary w-100" onclick="uploadSubjectPlan()">지도내용 업로드</button>
+                                    </div>
+                                    <button class="btn btn-outline-success w-100 mt-2" id="print-subject-plan-btn"><i class="fas fa-print me-2"></i>지도계획 출력</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="card shadow-sm mb-3"><div class="card-body py-2" id="annual-stats"></div></div>
+                            <div class="card shadow-sm" style="height: 600px;">
+                                <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+                                    <span>연간 시간표 & 지도내용 (우클릭: 수정/평가/삭제)</span>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-secondary" onclick="filterAnnualBySemester(1)">1학기</button>
+                                        <button class="btn btn-outline-secondary" onclick="filterAnnualBySemester(2)">2학기</button>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0 overflow-auto">
+                                    <table class="table table-bordered table-hover mb-0" style="font-size: 0.95rem;">
+                                        <thead class="table-light sticky-top" style="z-index: 5;">
+                                            <tr class="text-center"><th style="width:120px;">날짜</th><th>시간표 / 지도내용</th></tr>
+                                        </thead>
+                                        <tbody id="annual-list-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="students" class="page-section">
+                <div class="container-fluid"><h4 class="mb-4 fw-bold">학생 생활 관리</h4>
+                    <div class="row g-4">
+                        <div class="col-md-8"><div class="card h-100 shadow-sm"><div class="card-header bg-white d-flex justify-content-between"><span class="fw-bold">명렬표</span><span class="badge bg-primary" id="student-count">0명</span></div><div class="card-body p-0 overflow-auto" style="max-height:600px;"><table class="table table-hover align-middle mb-0"><thead class="table-light sticky-top"><tr><th>번호</th><th>이름</th><th>성별</th><th>전화</th><th>비고</th><th>삭제</th></tr></thead><tbody id="student-list-body"></tbody></table></div></div></div>
+                        <div class="col-md-4"><div class="card shadow-sm sticky-top" style="top:20px;"><div class="card-header bg-white fw-bold">학생 등록</div><div class="card-body"><input type="number" id="stdNum" class="form-control mb-2" placeholder="번호"><input type="text" id="stdName" class="form-control mb-2" placeholder="이름"><div class="mb-2"><input type="radio" name="stdGender" value="남" checked> 남 <input type="radio" name="stdGender" value="여"> 여</div><input type="tel" id="stdPhone" class="form-control mb-2" placeholder="전화번호"><input type="text" id="stdNote" class="form-control mb-2" placeholder="특이사항"><button class="btn btn-primary w-100 mb-2" id="add-student-btn">등록</button><button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#batchStudentModal">엑셀 일괄등록</button></div></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="incidents" class="page-section">
+                <div class="container-fluid"><h4 class="mb-4 fw-bold text-danger">학생 사안(안전) 관리</h4>
+                    <div class="row g-4">
+                        <div class="col-md-4"><div class="card shadow-sm border-danger"><div class="card-header bg-danger text-white fw-bold">사안 기록 (비밀번호 보호)</div><div class="card-body"><select id="incident-student" class="form-select mb-2"></select><input type="date" id="incident-date" class="form-control mb-2"><textarea id="incident-content" class="form-control mb-2" rows="4" placeholder="내용"></textarea><div class="mb-3"><label class="fw-bold small">조치사항:</label><br><input type="checkbox" id="inc-m1">상담 <input type="checkbox" id="inc-m2">조언 <input type="checkbox" id="inc-m3">지도 <input type="checkbox" id="inc-m4">훈육 <input type="checkbox" id="inc-m5">훈계</div><button class="btn btn-danger w-100" id="add-incident-btn">저장</button></div></div></div>
+                        <div class="col-md-8"><div class="card shadow-sm h-100"><div class="card-header bg-white fw-bold">사안 대장</div><div class="card-body p-0 overflow-auto"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>날짜</th><th>학생</th><th>내용</th><th>조치</th><th>관리</th></tr></thead><tbody id="incident-list-body"></tbody></table></div></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="experiential" class="page-section">
+                <div class="container-fluid"><h4 class="mb-4 fw-bold">교외체험학습 관리</h4>
+                    <div class="row g-4">
+                        <div class="col-md-4"><div class="card shadow-sm"><div class="card-header bg-white fw-bold">신청</div><div class="card-body"><select id="exp-student" class="form-select mb-2"></select><select id="exp-type" class="form-select mb-2"><option>가족동반여행</option><option>친인척방문</option><option>답사/견학</option><option>기타</option></select><input type="date" id="exp-start" class="form-control mb-2"><input type="date" id="exp-end" class="form-control mb-2"><input type="text" id="exp-reason" class="form-control mb-2" placeholder="사유"><button class="btn btn-primary w-100" id="add-exp-btn">등록</button></div></div></div>
+                        <div class="col-md-8"><div class="card shadow-sm h-100"><div class="card-header bg-white fw-bold">현황</div><div class="card-body p-0 overflow-auto"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>학생</th><th>기간</th><th>종류</th><th>서류제출</th><th>상태</th><th>관리</th></tr></thead><tbody id="exp-list-body"></tbody></table></div></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="evaluation" class="page-section">
+                <div class="container-fluid"><h4 class="mb-4 fw-bold">학생 평가관리</h4>
+                    <div class="row g-4">
+                        <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-header bg-white d-flex justify-content-between"><span class="fw-bold">평가 목록</span><button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addEvalModal">추가</button></div><div class="card-body p-0"><div class="list-group list-group-flush" id="eval-plan-list"></div></div></div></div>
+                        <div class="col-md-8"><div class="card shadow-sm h-100"><div class="card-header bg-white d-flex justify-content-between"><span class="fw-bold" id="grading-title">선택 필요</span><div><button class="btn btn-outline-success me-1" id="export-grades-btn" disabled>엑셀</button><button class="btn btn-success" id="save-grades-btn" disabled>저장</button></div></div><div class="card-body p-0 overflow-auto"><table class="table table-hover mb-0"><thead class="table-light sticky-top"><tr><th>이름</th><th>평가</th><th>기록</th></tr></thead><tbody id="grading-table-body"></tbody></table></div></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tasks" class="page-section">
+                <div class="container-fluid"><h4 class="mb-4 fw-bold">교원 업무 관리</h4>
+                    <div class="card shadow-sm mb-3"><div class="card-body d-flex gap-2"><input type="text" id="taskTitle" class="form-control" placeholder="할 일"><input type="date" id="taskDueDate" class="form-control w-25"><select id="taskCategory" class="form-select w-25"><option>일반</option><option>행정</option><option>학생</option><option>긴급</option></select><button class="btn btn-primary" id="add-task-btn">추가</button></div></div>
+                    <div class="card shadow-sm"><div class="card-body p-0 overflow-auto" style="height:600px;"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>완료</th><th>내용</th><th>마감</th><th>분류</th><th>삭제</th></tr></thead><tbody id="task-list-body"></tbody></table></div></div>
+                </div>
+            </div>
+
+            <div id="data-manage" class="page-section">
+                <div class="container-fluid"><h4 class="mb-4 fw-bold">데이터 안전 관리</h4>
+                    <div class="row g-4 mt-3">
+                        <div class="col-md-4"><div class="card h-100 shadow-sm border-primary text-center p-5"><i class="fas fa-download fa-3x text-primary mb-3"></i><h5>백업 (JSON)</h5><button class="btn btn-primary w-100" id="backup-btn">다운로드</button></div></div>
+                        <div class="col-md-4"><div class="card h-100 shadow-sm border-success text-center p-5"><i class="fas fa-upload fa-3x text-success mb-3"></i><h5>복구</h5><input type="file" id="importFile" class="form-control mb-2"><button class="btn btn-success w-100" id="restore-btn">실행</button></div></div>
+                        <div class="col-md-4"><div class="card h-100 shadow-sm border-danger text-center p-5"><i class="fas fa-trash-alt fa-3x text-danger mb-3"></i><h5>초기화</h5><button class="btn btn-outline-danger w-100" id="reset-btn">전체 삭제</button></div></div>
+                        <div class="col-12">
+                            <div class="card shadow-sm border-dark">
+                                <div class="card-body d-flex justify-content-between align-items-center p-4">
+                                    <div>
+                                        <h5 class="fw-bold"><i class="fas fa-print me-2"></i>종합 학급경영록 출력 (PDF 저장)</h5>
+                                        <p class="text-muted mb-0 small">기초정보, 학생명부, 시간표, 지도계획, 평가, 출결, 상담, 체험학습 등 모든 기록을 한 번에 출력합니다.</p>
+                                    </div>
+                                    <button class="btn btn-dark btn-lg" id="print-all-report-btn">종합 리포트 생성</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="stats" class="page-section"><div class="container-fluid"><h4 class="mb-4 fw-bold">통계 및 기록</h4><div class="row g-4"><div class="col-md-3"><div class="card shadow-sm h-100"><div class="card-header bg-white fw-bold">학생 선택</div><div class="card-body p-0 overflow-auto"><div class="list-group list-group-flush" id="stats-student-list"></div></div></div></div><div class="col-md-9"><div class="card shadow-sm h-100"><div class="card-header bg-white d-flex justify-content-between"><span class="fw-bold" id="report-title">요약</span><button class="btn btn-sm btn-outline-secondary" onclick="window.print()">인쇄</button></div><div class="card-body bg-light" id="report-area"><div id="class-stats-view" class="text-center p-5"><h3>전체 결석: <span id="total-absent" class="text-danger">0</span></h3></div><div id="individual-report-view" style="display:none; padding:20px; background:white; border:1px solid #ddd;"><h4>종합 기록</h4><hr><h6>출결</h6><p id="report-attendance">-</p><h6>평가</h6><div id="report-evaluation">-</div><h6>상담</h6><div id="report-counseling">-</div></div></div></div></div></div></div></div>
+            
+            <div id="settings" class="page-section"><div class="container-fluid"><h4 class="mb-4 fw-bold">기본 환경 설정</h4><div class="row g-4"><div class="col-md-8"><div class="card shadow-sm h-100"><div class="card-header bg-white fw-bold">학교 및 학급 정보</div><div class="card-body"><div class="mb-3"><label>학교명</label><input type="text" class="form-control" id="schoolName"></div><div class="row"><div class="col-md-6 mb-3"><label>학년도</label><input type="number" class="form-control" id="schoolYear"></div><div class="col-md-6 mb-3"><label>학년/반</label><div class="input-group"><input type="number" class="form-control" id="grade"><span class="input-group-text">학년</span><input type="number" class="form-control" id="classNo"><span class="input-group-text">반</span></div></div></div><div class="mb-3"><label>담임교사</label><input type="text" class="form-control" id="teacherName"></div><div class="mb-3"><label class="fw-bold">1학기</label><div class="input-group"><input type="date" class="form-control" id="term1Start"><span class="input-group-text">~</span><input type="date" class="form-control" id="term1End"></div></div><div class="mb-3"><label class="fw-bold">2학기</label><div class="input-group"><input type="date" class="form-control" id="term2Start"><span class="input-group-text">~</span><input type="date" class="form-control" id="term2End"></div></div><div class="text-end"><button class="btn btn-primary" id="save-settings-btn">설정 저장</button></div></div></div></div><div class="col-md-4"><div class="card shadow-sm border-warning"><div class="card-header bg-warning text-dark fw-bold"><i class="fas fa-lock me-2"></i>보안 설정 (비밀번호 관리)</div><div class="card-body"><div class="mb-3"><label>현재 비밀번호</label><input type="password" id="curr-pwd" class="form-control"></div><div class="mb-3"><label>새 비밀번호</label><input type="password" id="new-pwd" class="form-control"></div><button class="btn btn-warning w-100" id="change-pwd-btn">비밀번호 변경</button></div></div></div></div></div></div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="fullSchedulerModal" tabindex="-1"><div class="modal-dialog modal-fullscreen"><div class="modal-content"><div class="modal-header bg-light"><h5 class="modal-title fw-bold">통합 스케줄러</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body bg-light p-4"><div class="card h-100 border-0 shadow-sm"><div class="card-body" id="full-calendar-el"></div></div></div></div></div></div>
+<div class="modal fade" id="dateActionModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="action-date">날짜 선택됨</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><button class="btn btn-success w-100 mb-2" onclick="openAttendanceFromModal()">이 날짜 출결 관리</button><button class="btn btn-primary w-100 mb-2" onclick="openAddTaskFromModal()">일정(할일) 추가</button><hr><div class="text-start small fw-bold mb-2">수업 연계 평가 추가:</div><div id="action-class-list" class="d-flex flex-wrap justify-content-center"></div></div></div></div></div>
+<div class="modal fade" id="attendanceModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="attendance-info">출결</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-header bg-light"><button class="btn btn-sm btn-outline-success w-100" id="mark-all-present-btn">전원 출석</button></div><div class="modal-body p-0"><table class="table text-center mb-0"><thead><tr><th>학생</th><th>상태 (자동처리됨)</th><th>비고</th></tr></thead><tbody id="attendance-list-body"></tbody></table></div><div class="modal-footer"><div class="text-muted small me-auto">* 지각: 이전시간 지각 / 조퇴: 이후시간 조퇴 / 결석: 전시간 결석</div><button class="btn btn-primary" id="save-attendance-btn">저장</button></div></div></div></div>
+<div class="modal fade" id="attendanceDateSelectModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="att-select-title">수업 선택</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="list-group" id="att-class-list"></div></div></div></div></div>
+<div class="modal fade" id="studentDetailModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-success text-white"><h5 class="modal-title">학생 정보</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><ul class="nav nav-tabs mb-3"><li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#std-info-tab">기본 정보</a></li><li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#std-att-tab" onclick="loadStudentAttendanceHistory()">출결 이력</a></li></ul><div class="tab-content"><div class="tab-pane fade show active" id="std-info-tab"><div class="row"><div class="col-md-4 border-end"><div class="text-center mb-4"><h4 class="mt-3 fw-bold" id="detail-name">-</h4><p class="text-muted" id="detail-number">-</p></div><div class="card bg-light border-0 mt-3"><div class="card-body p-2 text-center"><small>결석</small><h5 class="text-danger fw-bold" id="stat-absent">0</h5></div></div></div><div class="col-md-8"><h6 class="fw-bold">상담 기록</h6><div class="input-group mb-2"><input type="date" id="counsel-date" class="form-control"><select id="counsel-type" class="form-select"><option>상담</option><option>행동</option><option>학부모</option></select><button class="btn btn-success" id="add-counsel-btn">추가</button></div><textarea id="counsel-content" class="form-control mb-2" placeholder="내용"></textarea><div id="counsel-list" style="height:300px;overflow-y:auto;" class="list-group list-group-flush border-top"></div></div></div></div><div class="tab-pane fade" id="std-att-tab"><div class="table-responsive"><table class="table table-hover"><thead class="table-light"><tr><th>날짜</th><th>교시</th><th>상태</th><th>비고</th><th>삭제</th></tr></thead><tbody id="std-att-history"></tbody></table></div></div></div></div></div></div></div>
+
+<div class="modal fade" id="addEvalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">평가 계획 추가</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="small text-muted">과목</label>
+                    <select id="eval-subject-select" class="form-select"></select>
+                </div>
+                <div class="mb-2">
+                    <label class="small text-muted">평가명 (단원 등)</label>
+                    <input type="text" id="eval-title" class="form-control" placeholder="예: 1. 재미있는 학교생활">
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="small text-muted">영역</label>
+                        <input type="text" id="eval-domain" class="form-control" placeholder="예: 표현">
+                    </div>
+                    <div class="col-6">
+                        <label class="small text-muted">평가요소</label>
+                        <input type="text" id="eval-element" class="form-control" placeholder="핵심 요소">
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="small text-muted">성취기준</label>
+                    <textarea id="eval-standard" class="form-control" rows="2" placeholder="성취기준 입력"></textarea>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="small text-muted">평가방법</label>
+                        <input type="text" id="eval-method" class="form-control" placeholder="예: 관찰평가">
+                    </div>
+                    <div class="col-6">
+                        <label class="small text-muted">시기</label>
+                        <input type="date" id="eval-date" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="add-eval-plan-btn">추가</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="batchStudentModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">일괄 등록</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-bold">엑셀(xlsx)로 등록</label>
+          <input type="file" id="batch-excel-file" class="form-control" accept=".xlsx,.xls">
+          <div class="form-text">첫 번째 시트에 [번호, 이름, 성별, 전화번호, 비고] 형태(헤더 1행)로 준비하세요.</div>
+          <button class="btn btn-outline-success mt-2" id="batch-excel-btn"><i class="fas fa-file-excel me-1"></i>엑셀로 등록</button>
+        </div>
+        <hr>
+        <p class="small text-muted mb-1">또는 탭(	) 구분으로 빠르게 입력 (번호	이름	성별	전화	비고)</p>
+        <textarea id="batch-input" class="form-control" rows="8"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-success" id="batch-register-btn">등록</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="editSubjectModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">과목 수정</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="text" id="editSubName" class="form-control mb-2"><input type="text" id="editSubShort" class="form-control mb-2"><input type="number" id="editSubHours" class="form-control"></div><div class="modal-footer"><button class="btn btn-primary" id="update-subject-btn">수정 완료</button></div></div></div></div>
+<div class="modal fade" id="editContentModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="edit-content-title">수업 편집</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">과목 선택</label>
+            <select id="edit-content-subject" class="form-select"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">지도단원</label>
+            <input type="text" id="edit-unit" class="form-control" placeholder="예: 1. 우리학교">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">학습목표</label>
+            <input type="text" id="edit-objective" class="form-control" placeholder="예: 학교를 알아요">
+          </div>
+          <div class="col-12">
+            <label class="form-label">지도내용</label>
+            <textarea id="edit-content-text" class="form-control" rows="4" placeholder="지도 내용(학습주제/활동)을 입력하세요"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold">범교과</label>
+            <div class="d-flex flex-wrap gap-3">
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="cross-safe"><label class="form-check-label" for="cross-safe">안전</label></div>
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="cross-info"><label class="form-check-label" for="cross-info">정보</label></div>
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="cross-play"><label class="form-check-label" for="cross-play">놀이</label></div>
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="cross-etc"><label class="form-check-label" for="cross-etc">기타</label></div>
+            </div>
+            <input type="text" id="cross-note" class="form-control mt-2" placeholder="범교과 내용(간단) - 체크 시 기본문구가 자동 입력됩니다.">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="saveContentEdit()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="printPreviewModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">지도계획 출력 미리보기</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="print-preview-area"></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.print()">인쇄</button></div></div></div></div>
+<div class="modal fade" id="addLinkModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">바로가기 추가</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="text" id="link-name" class="form-control mb-2" placeholder="이름 (예: 충북소통메신저)"><input type="text" id="link-url" class="form-control mb-2" placeholder="URL (예: https://...)"></div><div class="modal-footer"><button class="btn btn-primary" onclick="saveCustomLink()">추가</button></div></div></div></div>
+
+<div class="modal fade" id="editExpModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">교외체험학습 수정</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">학생</label>
+          <input type="text" id="exp-edit-student" class="form-control" disabled>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">유형</label>
+          <select id="exp-edit-type" class="form-select">
+            <option value="가정학습">가정학습</option>
+            <option value="현장체험">현장체험</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label">시작일</label><input type="date" id="exp-edit-start" class="form-control"></div>
+          <div class="col-6"><label class="form-label">종료일</label><input type="date" id="exp-edit-end" class="form-control"></div>
+        </div>
+        <div class="mt-2">
+          <label class="form-label">사유</label>
+          <textarea id="exp-edit-reason" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="mt-2">
+          <label class="form-label">상태</label>
+          <select id="exp-edit-status" class="form-select">
+            <option value="requested">신청</option>
+            <option value="approved">승인</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="save-exp-edit-btn">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="db.js"></script>
+<script src="app.js"></script>
+<script>
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(() => console.log('PWA Registered')).catch(e => console.error('SW Fail:', e)); }
+</script>
+</body>
+</html>
