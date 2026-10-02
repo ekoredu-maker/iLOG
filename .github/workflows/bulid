@@ -1,0 +1,59 @@
+name: Windows 빌드
+
+on:
+  push:
+    tags: ['v*']          # v10.1.0 같은 태그를 올리면 릴리스까지 자동 생성
+  workflow_dispatch:      # Actions 탭에서 수동 실행
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 패키지 설치
+        run: python -m pip install -r requirements-dev.txt
+      - name: 백엔드 테스트
+        run: python -m pytest -q
+      - name: 화면 자동 점검 (E2E)
+        run: |
+          python -m playwright install chromium
+          python tests/e2e_ui.py e2e-output
+      - name: exe 빌드 (1개 / 폴더형)
+        run: |
+          python -m PyInstaller --noconfirm --clean iLOG.spec
+          python -m PyInstaller --noconfirm --clean iLOG_folder.spec
+          Compress-Archive -Force -Path dist\iLOG\* -DestinationPath dist\iLOG_folder.zip
+      - name: 실행 점검 (실제 창을 띄워 화면·파이썬 연결 확인)
+        run: |
+          foreach ($exe in @("dist\iLOG\iLOG.exe", "dist\iLOG.exe")) {
+            $out = Join-Path $env:RUNNER_TEMP ("selftest_" + [IO.Path]::GetFileNameWithoutExtension((Split-Path $exe -Parent) + "x") + ".json")
+            $env:ILOG_SELFTEST = $out
+            $env:ILOG_DATA_DIR = Join-Path $env:RUNNER_TEMP ("ilogdata_" + [guid]::NewGuid())
+            $p = Start-Process $exe -PassThru
+            if (-not $p.WaitForExit(180000)) { Stop-Process -Id $p.Id -Force; Write-Error "$exe : 시간 초과"; exit 1 }
+            if (-not (Test-Path $out)) { Write-Error "$exe : 점검 결과 없음"; exit 1 }
+            $r = Get-Content $out -Raw -Encoding utf8
+            Write-Host "$exe => $r"
+            if (-not ($r | ConvertFrom-Json).ok) { Write-Error "$exe : 점검 실패"; exit 1 }
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iLOG-windows
+          path: |
+            dist/iLOG.exe
+            dist/iLOG_folder.zip
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: e2e-output
+      - name: 릴리스 첨부
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/iLOG.exe
+            dist/iLOG_folder.zip
