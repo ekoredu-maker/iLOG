@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest>=8
+pyinstaller>=6.6
+playwright>=1.40     # tests/e2e_ui.py (화면 자동 점검) 용

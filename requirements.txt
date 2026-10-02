@@ -1,0 +1,5 @@
+pywebview>=5.0,<7
+openpyxl>=3.1
+cryptography>=42     # 데이터·백업 암호화 (AES-256-GCM)
+xlrd>=2.0            # 예전 .xls 엑셀 읽기용
+python-hwpx>=6.7,<7  # 한글(HWPX) 서식 만들기·학교 양식 채우기 (Apache-2.0)
