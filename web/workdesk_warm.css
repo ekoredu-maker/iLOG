@@ -1,0 +1,277 @@
+/* iLOG Warm Workdesk UI
+   통계/기록 · 서식 출력 · 교원업무관리 전용 시각 레이어 */
+
+/* 공통 상단 요약 */
+.ilog-work-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0 20px;
+}
+.ilog-work-mini {
+  min-height: 88px;
+  padding: 14px 16px;
+  border: 1px solid #eee4df;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 5px 16px rgba(92,76,68,.04);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ilog-work-mini .mini-icon {
+  width: 39px;
+  height: 39px;
+  flex: 0 0 39px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  font-size: .95rem;
+}
+.ilog-work-mini small {
+  display: block;
+  color: #978e93;
+  font-weight: 680;
+  font-size: .72rem;
+  margin-bottom: 3px;
+}
+.ilog-work-mini strong {
+  display: block;
+  color: #55515a;
+  font-size: 1.05rem;
+  font-weight: 820;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ilog-work-mini.pink { background: linear-gradient(135deg,#fff4f7,#fff); }
+.ilog-work-mini.pink .mini-icon { background:#ffe6ed; color:#bb7388; }
+.ilog-work-mini.mint { background: linear-gradient(135deg,#f0faf7,#fff); }
+.ilog-work-mini.mint .mini-icon { background:#dff3ec; color:#5c9585; }
+.ilog-work-mini.sky { background: linear-gradient(135deg,#f0f8fd,#fff); }
+.ilog-work-mini.sky .mini-icon { background:#dfedf8; color:#668faf; }
+.ilog-work-mini.yellow { background: linear-gradient(135deg,#fff9e9,#fff); }
+.ilog-work-mini.yellow .mini-icon { background:#fff0bf; color:#a98b40; }
+.ilog-work-mini.lilac { background: linear-gradient(135deg,#f8f4ff,#fff); }
+.ilog-work-mini.lilac .mini-icon { background:#ede5fb; color:#8774ac; }
+
+/* ───────── 통계/기록 ───────── */
+#stats .container-fluid > h4::after {
+  content: "학급의 흐름을 한눈에 보고, 필요할 때 학생별 기록으로 들어가요.";
+  display: block;
+  margin-top: 6px;
+  color: #9a9096;
+  font-size: .78rem;
+  font-weight: 520;
+}
+#stats .card { overflow: hidden; }
+#stats .card-header {
+  background: linear-gradient(90deg,#fff9fa,#fbfdff) !important;
+  color: #655f67;
+  font-weight: 760;
+}
+#stats-student-list {
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 7px;
+}
+#stats-student-list .list-group-item {
+  border: 1px solid #eee5e1 !important;
+  border-radius: 11px !important;
+  background: #fffdfa;
+  color: #69626a;
+  font-size: .82rem;
+  font-weight: 650;
+  padding: 9px 10px;
+}
+#stats-student-list .list-group-item:hover,
+#stats-student-list .list-group-item.active {
+  background: linear-gradient(90deg,#fff0f4,#f2f8fd) !important;
+  color: #765f6a !important;
+  border-color: #ead5dc !important;
+}
+#total-absent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fff0f4;
+  color: #b16e82;
+  font-weight: 820;
+}
+#individual-report-view .card,
+#class-stats-view .card {
+  border-color: #eee4df !important;
+}
+#report-title {
+  color: #615961;
+  font-weight: 820;
+}
+#report-title::before { content: "♡ "; color:#d28ca0; }
+#report-attendance {
+  border-radius: 13px;
+  background: #f3faf7;
+  color: #5e7f75;
+  padding: 10px 13px;
+  display: inline-block;
+}
+
+/* ───────── 서식 출력: '문서 서랍' 느낌 ───────── */
+#forms .container-fluid > h4::after {
+  content: "기록해 둔 내용을 필요한 문서로 꺼내 쓰는 선생님의 문서 서랍이에요.";
+  display: block;
+  margin-top: 6px;
+  color: #9a9096;
+  font-size: .78rem;
+  font-weight: 520;
+}
+.ilog-form-desk {
+  position: relative;
+  overflow: hidden;
+  margin: 14px 0 17px;
+  padding: 18px 20px;
+  border: 1px dashed #e8d9dd;
+  border-radius: 17px;
+  background: linear-gradient(110deg,#fff7fa 0%,#fffdf9 52%,#f4faff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.ilog-form-desk::after {
+  content: "✦";
+  position: absolute;
+  right: 20px;
+  top: 8px;
+  color: #edcbd5;
+  font-size: 1rem;
+}
+.ilog-form-desk-copy { display:flex; align-items:center; gap:12px; }
+.ilog-form-desk-icon {
+  width: 48px; height:48px; flex:0 0 48px;
+  border-radius: 15px;
+  display:grid; place-items:center;
+  background:#fff0f4; color:#ba778a;
+  font-size:1.12rem;
+}
+.ilog-form-desk strong { display:block; color:#5c555d; font-size:.98rem; }
+.ilog-form-desk small { display:block; color:#998f95; margin-top:3px; }
+.ilog-form-desk-tags { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+.ilog-form-desk-tags span {
+  padding:6px 9px;
+  border-radius:999px;
+  background:#fff;
+  border:1px solid #eadfe2;
+  color:#877983;
+  font-size:.69rem;
+  font-weight:720;
+}
+#forms > .container-fluid > .nav-tabs,
+#forms .container-fluid > .nav-tabs {
+  gap: 7px;
+  border: 0 !important;
+  margin-bottom: 16px !important;
+  flex-wrap: wrap;
+}
+#forms .nav-tabs .nav-link {
+  border: 1px solid #e9e1dd !important;
+  border-radius: 12px !important;
+  background: #fff;
+  color: #81777e;
+  padding: 9px 13px;
+  box-shadow: 0 3px 10px rgba(90,74,68,.025);
+}
+#forms .nav-tabs .nav-link:nth-child(1) { background:#fff8e8; }
+#forms .nav-tabs .nav-link.active {
+  background: linear-gradient(90deg,#fff0f4,#eef7fd) !important;
+  color: #8f6674 !important;
+  border-color:#ead4dc !important;
+  box-shadow: 0 5px 15px rgba(111,89,99,.06), inset 0 -3px 0 #e4a2b4;
+}
+#forms .tab-pane > .card {
+  border-color:#eee4df !important;
+  background:linear-gradient(180deg,#fff,#fffdfb);
+}
+#forms .tab-pane > .card > .card-body { padding: 20px; }
+#forms table.table-bordered { border-color:#eee5df; }
+#forms table.table-bordered thead th { background:#fff9f5 !important; }
+#forms textarea { background:#fffefc; }
+#forms details {
+  margin-top: 12px;
+  border:1px solid #eee4df;
+  border-radius:12px;
+  padding:10px 12px;
+  background:#fffdfa;
+}
+#forms details summary { color:#796f76; cursor:pointer; }
+#forms .btn-primary { box-shadow:0 5px 12px rgba(109,147,184,.12); }
+
+/* ───────── 교원업무관리 ───────── */
+#tasks .container-fluid > h4::after {
+  content: "해야 할 일은 가볍게 적고, 끝낸 일은 편안하게 내려놓아요.";
+  display:block;
+  margin-top:6px;
+  color:#9a9096;
+  font-size:.78rem;
+  font-weight:520;
+}
+#tasks .card:first-of-type {
+  border:1px dashed #e7dadd !important;
+  background:linear-gradient(100deg,#fff7f9,#fbfdff);
+  box-shadow:none !important;
+}
+#tasks .card:first-of-type .card-body { padding:15px 17px; }
+#tasks #taskTitle { flex: 1 1 320px; }
+#tasks #taskDueDate,
+#tasks #taskCategory { min-width: 150px; }
+#tasks #add-task-btn {
+  min-width: 86px;
+  background:linear-gradient(135deg,#d990a4,#88acd2);
+  border:0;
+}
+#task-list-body tr {
+  transition:background .14s ease, opacity .14s ease;
+}
+#task-list-body tr td { border-bottom-color:#f0e8e4 !important; }
+#task-list-body tr:not(.table-light):hover td { background:#fff9fa !important; }
+#task-list-body tr.table-light { opacity:.62; }
+#task-list-body input[type="checkbox"] {
+  width:18px;
+  height:18px;
+  accent-color:#78b5a3;
+}
+#task-list-body .badge {
+  background:#f4f0ed !important;
+  color:#7c7379 !important;
+  border:1px solid #e8dfda;
+  padding:6px 8px;
+}
+.ilog-task-celebrate {
+  padding: 16px 18px;
+  border-radius: 15px;
+  background: linear-gradient(100deg,#eef9f5,#fffdf9);
+  border:1px solid #dceee8;
+  color:#64857b;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:15px;
+}
+.ilog-task-celebrate i { color:#72aa99; }
+
+/* 화면 폭 대응 */
+@media (max-width: 980px) {
+  .ilog-work-overview { grid-template-columns: 1fr; }
+  .ilog-form-desk { align-items:flex-start; flex-direction:column; }
+  .ilog-form-desk-tags { justify-content:flex-start; }
+  #stats-student-list { grid-template-columns:1fr; }
+}
+
+@media print {
+  .ilog-work-overview,
+  .ilog-form-desk,
+  .ilog-task-celebrate { display:none !important; }
+}
