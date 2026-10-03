@@ -71,10 +71,12 @@ def _apply_theme(window) -> None:
             " css('ilog-classroom-warm-style','classroom_warm.css');"
             " css('ilog-academic-warm-style','academic_warm.css');"
             " css('ilog-workdesk-warm-style','workdesk_warm.css');"
+            " css('ilog-assessment-studio-style','assessment_studio.css');"
             " js('ilog-warm-dashboard-script','dashboard_warm.js');"
             " js('ilog-classroom-warm-script','classroom_warm.js');"
             " js('ilog-academic-warm-script','academic_warm.js');"
             " js('ilog-workdesk-warm-script','workdesk_warm.js');"
+            " js('ilog-assessment-studio-script','assessment_studio.js');"
             " return true;"
             "})()"
         )
