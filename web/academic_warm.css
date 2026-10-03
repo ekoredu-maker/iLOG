@@ -1,0 +1,356 @@
+/* iLOG Academic Warm UI — 교외체험학습 · 학생평가 */
+
+/* ───────────────── 공통 상단 요약 ───────────────── */
+.ilog-academic-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 18px;
+}
+.ilog-academic-mini {
+  position: relative;
+  overflow: hidden;
+  min-height: 88px;
+  padding: 15px 16px;
+  border: 1px solid #eee4df;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 5px 17px rgba(91, 76, 64, .045);
+}
+.ilog-academic-mini::after {
+  content: "";
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  right: -20px;
+  top: -22px;
+  border-radius: 50%;
+  background: var(--mini-soft, #fff3f6);
+}
+.ilog-academic-mini .mini-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 7px;
+  border-radius: 10px;
+  background: var(--mini-soft, #fff3f6);
+  color: var(--mini-accent, #b8778a);
+  font-size: .76rem;
+}
+.ilog-academic-mini small {
+  display: block;
+  color: #988e94;
+  font-size: .7rem;
+  font-weight: 700;
+}
+.ilog-academic-mini strong {
+  display: block;
+  margin-top: 1px;
+  color: #55515a;
+  font-size: 1.1rem;
+  font-weight: 820;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ilog-academic-mini.pink { --mini-soft:#fff0f4; --mini-accent:#bb7589; }
+.ilog-academic-mini.mint { --mini-soft:#edf9f5; --mini-accent:#5d9988; }
+.ilog-academic-mini.sky { --mini-soft:#eef7fd; --mini-accent:#668faa; }
+.ilog-academic-mini.yellow { --mini-soft:#fff8df; --mini-accent:#aa8d43; }
+.ilog-academic-mini.lilac { --mini-soft:#f5f0ff; --mini-accent:#8573ac; }
+
+/* ───────────────── 교외체험학습 ───────────────── */
+#experiential .container-fluid > h4 {
+  margin-bottom: 5px !important;
+}
+#experiential .container-fluid > h4::after {
+  content: "신청부터 승인, 출결 반영, 서류까지 한 흐름으로 차분하게 관리해요.";
+  display: block;
+  margin-top: 6px;
+  color: #9b9196;
+  font-size: .78rem;
+  font-weight: 520;
+}
+#experiential .row.g-4 > .col-md-4 > .card {
+  position: relative;
+  overflow: hidden;
+  border-color: #eadfe2 !important;
+  background: linear-gradient(160deg, #fff, #fffaf9);
+}
+#experiential .row.g-4 > .col-md-4 > .card::after {
+  content: "✦";
+  position: absolute;
+  right: 18px;
+  top: 11px;
+  color: #eed0d8;
+  font-size: .82rem;
+}
+#experiential .row.g-4 > .col-md-4 .card-header {
+  padding: 15px 18px;
+  color: #6c6067;
+  background: linear-gradient(90deg, #fff3f6, #fffdfa) !important;
+}
+#experiential .row.g-4 > .col-md-4 .card-header::before {
+  content: "✈";
+  margin-right: 7px;
+  color: #c88699;
+}
+#experiential .row.g-4 > .col-md-4 .card-body {
+  padding: 18px;
+}
+#experiential #exp-student,
+#experiential #exp-type,
+#experiential #exp-start,
+#experiential #exp-end,
+#experiential #exp-reason {
+  background-color: #fffefd;
+}
+#experiential #exp-approved {
+  accent-color: #79b39f;
+}
+#experiential #add-exp-btn {
+  margin-top: 4px;
+  background: linear-gradient(135deg, #7daed4, #8eb9d9);
+  border: 0;
+  border-radius: 11px;
+  box-shadow: 0 7px 16px rgba(104,151,190,.13);
+}
+#experiential .row.g-4 > .col-md-8 > .card {
+  border-color: #e9e2de !important;
+  overflow: hidden;
+}
+#experiential .row.g-4 > .col-md-8 .card-header {
+  padding: 15px 18px;
+  color: #665e64;
+  background: linear-gradient(90deg, #fffdfa, #f8fcff) !important;
+}
+#experiential .row.g-4 > .col-md-8 .card-header::before {
+  content: "☁";
+  margin-right: 7px;
+  color: #8db5cf;
+}
+#experiential table thead th {
+  background: #fff9f6 !important;
+  color: #81777d;
+}
+#experiential #exp-list-body tr {
+  transition: background .15s ease;
+}
+#experiential #exp-list-body tr:hover > td {
+  background: #fffaf9 !important;
+}
+#experiential #exp-list-body td {
+  padding-top: .82rem;
+  padding-bottom: .82rem;
+}
+#experiential #exp-list-body td:first-child {
+  font-weight: 760;
+  color: #5d565c;
+}
+#experiential #exp-list-body td:first-child::before {
+  content: "♡";
+  margin-right: 6px;
+  color: #d898aa;
+}
+#experiential #exp-list-body input[type="checkbox"] {
+  accent-color: #7db8a6;
+}
+#experiential #exp-list-body .badge {
+  min-width: 50px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-weight: 740;
+  box-shadow: none;
+}
+#experiential #exp-list-body .badge.bg-success {
+  color: #568e7f !important;
+  background: #edf9f5 !important;
+  border: 1px solid #cee9e0;
+}
+#experiential #exp-list-body .badge.bg-warning {
+  color: #927839 !important;
+  background: #fff8df !important;
+  border: 1px solid #eee0ad;
+}
+#experiential #exp-list-body .badge.bg-secondary {
+  color: #7e7587 !important;
+  background: #f5f0ff !important;
+  border: 1px solid #e0d7ef;
+}
+#experiential #exp-list-body .btn {
+  border-radius: 9px;
+}
+
+/* 체험학습 수정 모달 */
+#editExpModal .modal-header {
+  background: linear-gradient(90deg, #fff1f5, #eef7fd) !important;
+  color: #655c63 !important;
+}
+#editExpModal .modal-title::before {
+  content: "✈ ";
+  color: #c9879a;
+}
+#editExpModal .btn-close { filter: none !important; }
+#editExpModal .nav-tabs .nav-link.active {
+  color: #a16d7d !important;
+  box-shadow: inset 0 -3px 0 #e6a3b4;
+}
+
+/* ───────────────── 학생평가 ───────────────── */
+#evaluation .container-fluid > h4 {
+  margin-bottom: 5px !important;
+}
+#evaluation .container-fluid > h4::after {
+  content: "점수보다 관찰을 중심에 두고, 아이의 성장 흔적을 간결하게 남겨요.";
+  display: block;
+  margin-top: 6px;
+  color: #9b9196;
+  font-size: .78rem;
+  font-weight: 520;
+}
+#evaluation .row.g-4 > .col-md-4 > .card,
+#evaluation .row.g-4 > .col-md-8 > .card {
+  border-color: #e9e1dd !important;
+  overflow: hidden;
+}
+#evaluation .row.g-4 > .col-md-4 .card-header {
+  padding: 14px 16px;
+  background: linear-gradient(90deg, #fff8e8, #fffafd) !important;
+  color: #6c6265;
+}
+#evaluation .row.g-4 > .col-md-4 .card-header span::before {
+  content: "★";
+  margin-right: 7px;
+  color: #dfb75c;
+}
+#evaluation .row.g-4 > .col-md-4 .card-header .btn {
+  color: #866d76;
+  background: #fff;
+  border: 1px solid #ead9de;
+}
+#evaluation #eval-plan-list {
+  padding: 8px;
+  background: #fffdfa;
+}
+#evaluation #eval-plan-list .list-group-item {
+  margin: 4px 0;
+  padding: 12px 12px;
+  border: 1px solid #eee5e0 !important;
+  border-radius: 12px !important;
+  background: #fff;
+  color: #5d5960;
+  transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease;
+}
+#evaluation #eval-plan-list .list-group-item:hover {
+  transform: translateY(-1px);
+  border-color: #e5d4da !important;
+  box-shadow: 0 6px 15px rgba(89,72,65,.055);
+}
+#evaluation #eval-plan-list .list-group-item.active {
+  color: #685b63 !important;
+  border-color: #ead1d9 !important;
+  background: linear-gradient(100deg, #fff0f4, #fff9eb) !important;
+  box-shadow: inset 0 0 0 1px rgba(220,155,174,.08);
+}
+#evaluation #eval-plan-list .list-group-item.active .text-primary {
+  color: #b67286 !important;
+}
+#evaluation #eval-plan-list .btn-outline-danger {
+  color: #bd7e8e;
+  border-color: #ecd3da;
+  background: rgba(255,255,255,.72);
+}
+
+#evaluation .row.g-4 > .col-md-8 .card-header {
+  min-height: 58px;
+  padding: 13px 16px;
+  background: linear-gradient(90deg, #fffdfa, #f8fcff) !important;
+  color: #625d64;
+}
+#evaluation #grading-title::before {
+  content: "✎ ";
+  color: #c9899b;
+}
+#evaluation #export-grades-btn {
+  color: #639888;
+  border-color: #c9e2db;
+  background: #f4fbf8;
+}
+#evaluation #save-grades-btn {
+  background: linear-gradient(135deg, #75b29f, #8ac0b0);
+  border: 0;
+}
+#evaluation .row.g-4 > .col-md-8 .card-body {
+  background: #fffdfb;
+}
+#evaluation #grading-table-body td {
+  padding-top: .74rem;
+  padding-bottom: .74rem;
+}
+#evaluation #grading-table-body td:first-child {
+  color: #5b565d;
+  font-weight: 720;
+}
+#evaluation #grading-table-body td:first-child::before {
+  content: "●";
+  margin-right: 7px;
+  color: #e5b6c1;
+  font-size: .48rem;
+  vertical-align: 2px;
+}
+#evaluation #grading-table-body select {
+  border-color: #e2d9d4;
+  background: #fff9f1;
+  font-weight: 720;
+  color: #766b64;
+}
+#evaluation #grading-table-body input {
+  border-color: #e3dcd7;
+  background: #fff;
+}
+#evaluation #grading-table-body input:focus {
+  border-color: #d6aebb;
+  box-shadow: 0 0 0 3px rgba(224,153,174,.09) !important;
+}
+
+/* 평가 결과 값에 따라 선택창에 은은한 색 */
+#evaluation #grading-table-body select.ilog-score-good {
+  background: #edf9f5;
+  color: #568d7e;
+  border-color: #cae6dd;
+}
+#evaluation #grading-table-body select.ilog-score-mid {
+  background: #fff8df;
+  color: #927a40;
+  border-color: #ecdfb1;
+}
+#evaluation #grading-table-body select.ilog-score-care {
+  background: #fff0f4;
+  color: #ad7082;
+  border-color: #efd3dc;
+}
+
+/* 평가 추가 모달 */
+#addEvalModal .modal-header {
+  background: linear-gradient(90deg, #fff8e5, #fff0f4) !important;
+  color: #655c62 !important;
+}
+#addEvalModal .modal-title::before {
+  content: "★ ";
+  color: #dfb65b;
+}
+#addEvalModal .btn-close { filter: none !important; }
+
+/* ───────────────── 반응형 ───────────────── */
+@media (max-width: 900px) {
+  .ilog-academic-overview { grid-template-columns: 1fr; }
+  .ilog-academic-mini { min-height: 74px; }
+  #experiential .row.g-4,
+  #evaluation .row.g-4 { row-gap: 14px !important; }
+  #evaluation #eval-plan-list { max-height: 260px; overflow: auto; }
+}
+
+@media print {
+  .ilog-academic-overview { display: none !important; }
+}
