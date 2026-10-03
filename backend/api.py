@@ -16,13 +16,15 @@ from pathlib import Path
 
 from . import attendance as att
 from . import forms
-from .hwpx_builder import inspect_template
 from . import reports
+from . import assessment_reports
+from . import class_book_assessment
+from .hwpx_builder import inspect_template
 from .curriculum import CurriculumLibrary
 from .db import Database, StoreError, new_id
 from .excel_io import make_template, normalize_date, read_rows_b64
 
-APP_VERSION = "10.2.0"
+APP_VERSION = "10.3.0"
 
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 HWPX_MIME = "application/hwp+zip"
@@ -396,8 +398,16 @@ class Api:
             data = reports.subject_plan_xlsx(self._db, params.get("subjects"))
             return {"filename": f"과목별_지도계획_{ts}.xlsx", "b64": _b64(data), "mime": XLSX_MIME}
         if kind == "class_book_xlsx":
-            data = reports.class_book_xlsx(self._db, bool(params.get("incidents")))
+            data = class_book_assessment.class_book_xlsx(self._db, bool(params.get("incidents")))
             return {"filename": f"학급경영록_{ts}.xlsx", "b64": _b64(data), "mime": XLSX_MIME}
+        if kind == "assessment_plan_hwpx":
+            name, data = assessment_reports.assessment_plan_hwpx(self._db, params["planId"])
+            return {"filename": _safe_filename(name), "b64": _b64(data), "mime": HWPX_MIME}
+        if kind == "assessment_plans_hwpx":
+            term = params.get("term")
+            term = int(term) if str(term or "") in ("1", "2") else None
+            name, data = assessment_reports.assessment_plans_hwpx(self._db, term)
+            return {"filename": _safe_filename(name), "b64": _b64(data), "mime": HWPX_MIME}
         if kind == "eval_xlsx":
             name, data = reports.eval_xlsx(self._db, params["planId"])
             return {"filename": _safe_filename(name), "b64": _b64(data), "mime": XLSX_MIME}
@@ -421,7 +431,7 @@ class Api:
         if kind == "subject_plan":
             return {"filename": "과목별_지도계획.html", "html": reports.subject_plan_html(self._db, params.get("subjects"))}
         if kind == "class_book":
-            return {"filename": "학급경영록.html", "html": reports.class_book_html(self._db, bool(params.get("incidents")))}
+            return {"filename": "학급경영록.html", "html": class_book_assessment.class_book_html(self._db, bool(params.get("incidents")))}
         if kind == "form":
             form = forms.build(self._db, params.get("kind"), params)
             return {"filename": f"{form.name}.html", "html": form.to_html()}
