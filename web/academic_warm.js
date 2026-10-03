@@ -56,7 +56,7 @@
 
   async function refreshExperiential() {
     ensureExperientialOverview();
-    if (!window.ExperientialRepo) return;
+    if (typeof ExperientialRepo === 'undefined') return;
     try {
       const list = await ExperientialRepo.getAll();
       const approved = list.filter(x => x.status === 'approved').length;
@@ -83,7 +83,7 @@
     ensureEvaluationOverview();
     try {
       let total = 0;
-      if (window.EvaluationRepo && EvaluationRepo.getPlans) {
+      if (typeof EvaluationRepo !== 'undefined' && EvaluationRepo.getPlans) {
         total = (await EvaluationRepo.getPlans()).length;
       } else {
         total = $('#eval-plan-list')?.querySelectorAll('.list-group-item').length || 0;
@@ -144,7 +144,7 @@
 
     const gradeBody = $('#grading-table-body');
     if (gradeBody) new MutationObserver(() => setTimeout(refreshEvaluation, 80))
-      .observe(gradeBody, { childList: true, subtree: true, attributes: true, attributeFilter: ['value'] });
+      .observe(gradeBody, { childList: true, subtree: true });
 
     const planList = $('#eval-plan-list');
     if (planList) new MutationObserver(() => setTimeout(refreshEvaluation, 80))
