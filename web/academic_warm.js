@@ -6,6 +6,11 @@
 
   const $ = (s, root = document) => root.querySelector(s);
 
+  function canReadData() {
+    const login = $('#login-overlay');
+    return !login || login.style.display === 'none';
+  }
+
   function ensureExperientialOverview() {
     const section = $('#experiential .container-fluid');
     if (!section || $('#ilog-exp-overview', section)) return;
@@ -56,7 +61,7 @@
 
   async function refreshExperiential() {
     ensureExperientialOverview();
-    if (typeof ExperientialRepo === 'undefined') return;
+    if (!canReadData() || typeof ExperientialRepo === 'undefined') return;
     try {
       const list = await ExperientialRepo.getAll();
       const approved = list.filter(x => x.status === 'approved').length;
@@ -81,6 +86,7 @@
 
   async function refreshEvaluation() {
     ensureEvaluationOverview();
+    if (!canReadData()) return;
     try {
       let total = 0;
       if (typeof EvaluationRepo !== 'undefined' && EvaluationRepo.getPlans) {
@@ -103,6 +109,7 @@
   }
 
   function refreshForActiveSection() {
+    if (!canReadData()) return;
     const exp = $('#experiential');
     const ev = $('#evaluation');
     if (exp && exp.classList.contains('active')) refreshExperiential();
@@ -150,8 +157,8 @@
     if (planList) new MutationObserver(() => setTimeout(refreshEvaluation, 80))
       .observe(planList, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
-    refreshExperiential();
-    refreshEvaluation();
+    // 로그인 전에는 DB를 읽지 않는다. 로그인 후 각 화면을 여는 순간 자동 갱신된다.
+    if (canReadData()) refreshForActiveSection();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(start, 0));
