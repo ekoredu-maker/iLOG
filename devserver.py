@@ -28,16 +28,20 @@ class Handler(SimpleHTTPRequestHandler):
             super().log_message(fmt, *args)
 
     def do_GET(self):
-        """개발/E2E 브라우저에도 데스크톱과 같은 테마·대시보드 레이어를 적용한다."""
+        """개발/E2E 브라우저에도 데스크톱과 같은 UI 확장 레이어를 적용한다."""
         if self.path in ("/", "/index.html"):
             try:
                 html = (BASE / "web" / "index.html").read_text(encoding="utf-8")
-                theme = '<link rel="stylesheet" href="theme.css" id="ilog-modern-theme">'
-                dash_css = '<link rel="stylesheet" href="dashboard_warm.css" id="ilog-warm-dashboard-style">'
-                dash_js = '<script src="dashboard_warm.js" id="ilog-warm-dashboard-script" defer></script>'
-                if theme not in html or dash_css not in html or dash_js not in html:
-                    inject = f"    {theme}\n    {dash_css}\n    {dash_js}\n"
-                    html = html.replace("</head>", inject + "</head>", 1)
+                resources = [
+                    '<link rel="stylesheet" href="theme.css" id="ilog-modern-theme">',
+                    '<link rel="stylesheet" href="dashboard_warm.css" id="ilog-warm-dashboard-style">',
+                    '<link rel="stylesheet" href="classroom_warm.css" id="ilog-classroom-warm-style">',
+                    '<script src="dashboard_warm.js" id="ilog-warm-dashboard-script" defer></script>',
+                    '<script src="classroom_warm.js" id="ilog-classroom-warm-script" defer></script>',
+                ]
+                missing = [r for r in resources if r not in html]
+                if missing:
+                    html = html.replace("</head>", "    " + "\n    ".join(missing) + "\n</head>", 1)
                 data = html.encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -61,7 +65,7 @@ class Handler(SimpleHTTPRequestHandler):
             if name.startswith("_") or not callable(fn):
                 raise AttributeError(f"없는 기능: {name}")
             body, code = json.dumps({"ok": fn(*args)}, ensure_ascii=False), 200
-        except Exception as e:  # 화면에 오류 메시지 전달
+        except Exception as e:
             traceback.print_exc()
             body, code = json.dumps({"error": str(e)}, ensure_ascii=False), 400
         data = body.encode("utf-8")
