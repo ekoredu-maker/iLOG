@@ -18,7 +18,6 @@ from backend.db import Database
 
 
 def resource_dir() -> Path:
-    # PyInstaller 로 묶였을 때는 임시 폴더(_MEIPASS)에 자원이 풀린다
     return Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 
 
@@ -26,7 +25,7 @@ def main() -> None:
     import webview  # type: ignore
 
     base = resource_dir()
-    db = Database()  # 자동 백업은 로그인(잠금 해제) 후에 실행됨
+    db = Database()
     api = Api(db, base / "curriculum_packs", desktop=True)
     window = webview.create_window(
         f"아이로그 iLOG v{APP_VERSION}",
@@ -41,7 +40,7 @@ def main() -> None:
     try:
         opts = dict(http_server=True, private_mode=False, storage_path=str(db.data_dir / "webview"))
         if sys.platform == "win32":
-            opts["gui"] = "edgechromium"  # 옛 IE 엔진으로 떨어지지 않도록 Edge WebView2 를 강제
+            opts["gui"] = "edgechromium"
         opts["func"] = _startup
         opts["args"] = (window,)
         webview.start(**opts)
@@ -56,12 +55,11 @@ def main() -> None:
         db.close()
 
 
-# ---------------------------------------------------------------- UI 시작 처리 / 자가 점검
 SELFTEST = os.environ.get("ILOG_SELFTEST")
 
 
 def _apply_theme(window) -> None:
-    """기존 HTML/JS를 건드리지 않고 UI 테마와 대시보드 확장 레이어를 덧씌운다."""
+    """기존 HTML/JS를 건드리지 않고 UI 확장 레이어를 덧씌운다."""
     try:
         window.events.loaded.wait(60)
         window.evaluate_js(
@@ -70,12 +68,14 @@ def _apply_theme(window) -> None:
             " function js(id,src){ if(document.getElementById(id)) return; const s=document.createElement('script'); s.id=id; s.src=src; s.defer=true; document.body.appendChild(s); }"
             " css('ilog-modern-theme','theme.css');"
             " css('ilog-warm-dashboard-style','dashboard_warm.css');"
+            " css('ilog-classroom-warm-style','classroom_warm.css');"
             " js('ilog-warm-dashboard-script','dashboard_warm.js');"
+            " js('ilog-classroom-warm-script','classroom_warm.js');"
             " return true;"
             "})()"
         )
     except Exception:
-        pass  # 테마 실패가 프로그램 실행을 막지 않도록
+        pass
 
 
 def _startup(window) -> None:
@@ -84,17 +84,11 @@ def _startup(window) -> None:
         _selftest(window)
 
 
-# ILOG_SELFTEST=결과파일경로 로 실행하면 창을 띄워 화면·파이썬 연결을 확인하고 결과를 쓴 뒤 종료한다.
 def _write_selftest(result: dict) -> None:
     Path(SELFTEST).write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
 
 
 def _selftest(window) -> None:
-    """실제 EXE에서 화면 자원·pywebview 브리지·파이썬 API·HWPX 엔진을 확인한다.
-
-    pywebview의 evaluate_js는 Promise를 직접 기다리지 않을 수 있으므로,
-    화면 존재 여부는 동기식으로 확인하고 API 호출 결과는 JS 전역 변수에 저장한 뒤 폴링한다.
-    """
     result = {"ok": False}
     try:
         loaded = window.events.loaded.wait(60)
@@ -117,13 +111,11 @@ def _selftest(window) -> None:
                     result["page"] = page
                     if page.get("bootstrap") and page.get("calendar") and page.get("bridge") and page.get("desktop") and page.get("statusFn"):
                         break
-            except Exception as e:  # 아직 준비 중
+            except Exception as e:
                 result["lastError"] = str(e)
             threading.Event().wait(1)
 
         page = result.get("page") or {}
-
-        # Python API 연결은 Promise 결과를 JS 전역 변수에 저장한 뒤 동기식으로 읽는다.
         if page.get("statusFn"):
             start_api_js = (
                 "window.__ilogSelftestStatus = null;"
@@ -150,7 +142,7 @@ def _selftest(window) -> None:
                     result["apiLastError"] = str(e)
                 threading.Event().wait(1)
 
-        try:  # 한글 서식 엔진(묶음 데이터 파일 포함) 동작 확인
+        try:
             from backend.hwpx_builder import HwpxBuilder
             b = HwpxBuilder()
             b.title("자가 점검")
@@ -186,7 +178,6 @@ def _fatal(message: str) -> None:
         return
     if sys.platform == "win32":
         import ctypes
-
         ctypes.windll.user32.MessageBoxW(None, message, "아이로그 실행 오류", 0x10)
     else:
         print(message, file=sys.stderr)
