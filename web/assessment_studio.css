@@ -1,0 +1,238 @@
+/* iLOG 수행평가 설계실
+   교육과정/지도계획 → 수행평가계획 → 학생평가로 이어지는 별도 평가 작업공간 */
+
+#assessment .ilog-assess-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 23px 25px;
+  margin: 0 0 18px;
+  border: 1px solid #eadfe2;
+  border-radius: 20px;
+  background: linear-gradient(115deg, #fff4f7 0%, #fffaf1 48%, #eef8fc 100%);
+  box-shadow: 0 8px 26px rgba(87, 72, 68, .055);
+}
+#assessment .ilog-assess-hero::after {
+  content: "";
+  position: absolute;
+  right: -42px;
+  top: -55px;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.55);
+}
+.ilog-assess-hero-copy { position: relative; z-index: 1; }
+.ilog-assess-kicker {
+  margin-bottom: 7px;
+  color: #ba7a8d;
+  font-size: .72rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+.ilog-assess-hero h4 { color: #514d55; margin-bottom: 7px; }
+.ilog-assess-hero p { margin: 0; color: #8f858b; font-size: .85rem; line-height: 1.6; }
+.ilog-assess-flow {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.ilog-assess-flow span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.82);
+  color: #756a70;
+  font-size: .7rem;
+  font-weight: 720;
+  border: 1px solid rgba(225,211,216,.7);
+}
+.ilog-assess-flow i { color: #c8aeb7; font-size: .65rem; }
+
+.ilog-assess-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 11px;
+  margin-bottom: 18px;
+}
+.ilog-assess-mini {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 80px;
+  padding: 13px 15px;
+  border: 1px solid #eee5e1;
+  border-radius: 15px;
+  background: #fff;
+}
+.ilog-assess-mini .mini-icon {
+  width: 42px; height: 42px; flex: 0 0 42px;
+  display: grid; place-items: center;
+  border-radius: 13px;
+}
+.ilog-assess-mini small { display:block; color:#9a9096; font-size:.69rem; font-weight:700; }
+.ilog-assess-mini strong { display:block; color:#575159; margin-top:2px; font-size:1rem; }
+.ilog-assess-mini.pink .mini-icon { background:#fff0f4; color:#bd788c; }
+.ilog-assess-mini.mint .mini-icon { background:#edf9f5; color:#629686; }
+.ilog-assess-mini.yellow .mini-icon { background:#fff8de; color:#ad8d43; }
+.ilog-assess-mini.sky .mini-icon { background:#eef7fd; color:#6b93b2; }
+
+.ilog-assess-workspace {
+  display: grid;
+  grid-template-columns: minmax(0,1.25fr) minmax(330px,.75fr);
+  gap: 16px;
+  align-items: start;
+}
+.ilog-assess-card {
+  border: 1px solid #ebe2df !important;
+  border-radius: 18px !important;
+  background: #fff;
+  box-shadow: 0 6px 22px rgba(85,70,64,.045) !important;
+}
+.ilog-assess-card .card-header {
+  padding: 15px 18px;
+  border-bottom: 1px solid #eee6e3;
+  background: #fffdfa !important;
+}
+.ilog-assess-card .card-header h5 { color:#5b555c; font-size:1rem; }
+.ilog-assess-step {
+  display:inline-grid;
+  place-items:center;
+  width:25px; height:25px;
+  margin-right:7px;
+  border-radius:9px;
+  background:#fff0f4;
+  color:#b97689;
+  font-size:.72rem;
+  font-weight:850;
+}
+.ilog-assess-helper { color:#9c9297; font-size:.73rem; }
+
+#assessment .form-label {
+  color:#756b71;
+  font-size:.74rem;
+  font-weight:760;
+  margin-bottom:5px;
+}
+#assessment .form-control,
+#assessment .form-select {
+  border-color:#e7dedb;
+  border-radius:11px;
+  background-color:#fff;
+  color:#5d575c;
+}
+#assessment textarea.form-control { line-height:1.55; }
+#assessment .form-control:focus,
+#assessment .form-select:focus {
+  border-color:#deb5c1;
+  box-shadow:0 0 0 .2rem rgba(222,181,193,.16);
+}
+
+.ilog-source-panel {
+  min-height: 182px;
+  padding: 14px;
+  border: 1px dashed #dfd5d1;
+  border-radius: 14px;
+  background: linear-gradient(145deg,#fffdf9,#f8fbfd);
+}
+.ilog-source-empty { padding:32px 10px; text-align:center; color:#a2999e; font-size:.78rem; }
+.ilog-source-head { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:11px; }
+.ilog-source-head strong { color:#5b555b; font-size:.9rem; }
+.ilog-source-head small { color:#9a9095; }
+.ilog-source-chip {
+  display:inline-block;
+  margin:0 5px 5px 0;
+  padding:5px 8px;
+  border-radius:999px;
+  background:#eef7fd;
+  color:#698da8;
+  font-size:.67rem;
+  font-weight:700;
+}
+.ilog-source-objective {
+  margin-top:8px;
+  padding:9px 10px;
+  border-radius:10px;
+  background:#fff7f9;
+  color:#7d6871;
+  font-size:.74rem;
+  line-height:1.55;
+}
+.ilog-source-content { margin-top:8px; color:#8c8489; font-size:.71rem; line-height:1.5; }
+
+.ilog-draft-btn {
+  border:1px solid #e0ced4;
+  background:#fff5f7;
+  color:#9b6676;
+  border-radius:10px;
+  font-size:.75rem;
+  font-weight:760;
+}
+.ilog-draft-btn:hover { background:#fcebf0; color:#875565; }
+.ilog-assess-save {
+  min-width:150px;
+  border:0 !important;
+  border-radius:11px !important;
+  background:linear-gradient(135deg,#d78fa3,#c9869b) !important;
+  color:#fff !important;
+  font-weight:780 !important;
+}
+.ilog-assess-cancel { border-radius:11px !important; }
+
+.ilog-rubric-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.ilog-rubric-box { padding:11px; border:1px solid #eee3df; border-radius:13px; background:#fffdfa; }
+.ilog-rubric-box:nth-child(1) { background:#f2faf6; }
+.ilog-rubric-box:nth-child(2) { background:#fffaf0; }
+.ilog-rubric-box:nth-child(3) { background:#fff5f7; }
+.ilog-rubric-level { margin-bottom:7px; color:#756b70; font-size:.72rem; font-weight:850; }
+
+.ilog-assess-list { display:flex; flex-direction:column; gap:10px; max-height:780px; overflow:auto; padding-right:2px; }
+.ilog-assess-plan {
+  padding:13px 14px;
+  border:1px solid #ebe3df;
+  border-radius:14px;
+  background:#fff;
+}
+.ilog-assess-plan:hover { border-color:#decdd2; box-shadow:0 5px 15px rgba(90,75,70,.055); }
+.ilog-plan-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.ilog-plan-subject { color:#ae7183; font-size:.68rem; font-weight:820; }
+.ilog-plan-title { color:#575159; font-weight:820; margin-top:2px; line-height:1.35; }
+.ilog-plan-unit { margin-top:5px; color:#938a90; font-size:.72rem; }
+.ilog-plan-meta { display:flex; gap:5px; flex-wrap:wrap; margin-top:9px; }
+.ilog-plan-meta span { padding:4px 7px; border-radius:999px; background:#faf6f3; color:#837a7f; font-size:.64rem; font-weight:670; }
+.ilog-plan-actions { display:flex; gap:5px; flex-wrap:wrap; margin-top:10px; padding-top:9px; border-top:1px dashed #eee4df; }
+.ilog-plan-actions button { border-radius:8px; font-size:.68rem; font-weight:700; }
+.ilog-status-badge { white-space:nowrap; padding:4px 7px; border-radius:999px; font-size:.62rem; font-weight:800; }
+.ilog-status-badge.draft { background:#fff4dc; color:#9f8138; }
+.ilog-status-badge.ready { background:#eaf8f3; color:#5e8e80; }
+.ilog-assess-empty { padding:40px 12px; text-align:center; color:#a2999e; font-size:.78rem; }
+.ilog-assess-empty i { display:block; margin-bottom:8px; color:#d8b8c2; font-size:1.5rem; }
+
+.ilog-next-phase {
+  margin-top:12px;
+  padding:12px 13px;
+  border:1px dashed #dcd1ce;
+  border-radius:13px;
+  background:#fafcff;
+  color:#8c8489;
+  font-size:.7rem;
+  line-height:1.55;
+}
+.ilog-next-phase strong { color:#71676d; }
+
+@media (max-width: 1180px) {
+  .ilog-assess-workspace { grid-template-columns:1fr; }
+  .ilog-assess-overview { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 760px) {
+  #assessment .ilog-assess-hero { align-items:flex-start; flex-direction:column; }
+  .ilog-assess-flow { justify-content:flex-start; }
+  .ilog-assess-overview { grid-template-columns:1fr 1fr; }
+  .ilog-rubric-grid { grid-template-columns:1fr; }
+}
