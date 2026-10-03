@@ -42,9 +42,8 @@ def main() -> None:
         opts = dict(http_server=True, private_mode=False, storage_path=str(db.data_dir / "webview"))
         if sys.platform == "win32":
             opts["gui"] = "edgechromium"  # 옛 IE 엔진으로 떨어지지 않도록 Edge WebView2 를 강제
-        if SELFTEST:
-            opts["func"] = _selftest
-            opts["args"] = (window,)
+        opts["func"] = _startup
+        opts["args"] = (window,)
         webview.start(**opts)
     except Exception as e:
         _fatal(
@@ -57,11 +56,33 @@ def main() -> None:
         db.close()
 
 
-# ---------------------------------------------------------------- 자가 점검
-# ILOG_SELFTEST=결과파일경로 로 실행하면 창을 띄워 화면·파이썬 연결을 확인하고 결과를 쓴 뒤 종료한다.
+# ---------------------------------------------------------------- UI 시작 처리 / 자가 점검
 SELFTEST = os.environ.get("ILOG_SELFTEST")
 
 
+def _apply_theme(window) -> None:
+    """기존 HTML/JS를 건드리지 않고 modern theme.css를 덧씌운다."""
+    try:
+        window.events.loaded.wait(60)
+        window.evaluate_js(
+            "(function(){"
+            " if(document.getElementById('ilog-modern-theme')) return true;"
+            " const l=document.createElement('link');"
+            " l.id='ilog-modern-theme'; l.rel='stylesheet'; l.href='theme.css';"
+            " document.head.appendChild(l); return true;"
+            "})()"
+        )
+    except Exception:
+        pass  # 테마 실패가 프로그램 실행을 막지 않도록
+
+
+def _startup(window) -> None:
+    _apply_theme(window)
+    if SELFTEST:
+        _selftest(window)
+
+
+# ILOG_SELFTEST=결과파일경로 로 실행하면 창을 띄워 화면·파이썬 연결을 확인하고 결과를 쓴 뒤 종료한다.
 def _write_selftest(result: dict) -> None:
     Path(SELFTEST).write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
 
