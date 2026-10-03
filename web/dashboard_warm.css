@@ -1,0 +1,164 @@
+/* iLOG warm classroom dashboard */
+.ilog-classroom-hero {
+  min-height: 188px;
+  margin-bottom: 20px;
+  padding: 28px 30px;
+  border: 1px solid #eadfd9;
+  border-radius: 24px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 24px;
+  overflow: hidden;
+  position: relative;
+  background:
+    radial-gradient(circle at 14% 12%, rgba(255,255,255,.9), transparent 20%),
+    linear-gradient(125deg, #fff4f6 0%, #fffaf2 46%, #f3f9ff 100%);
+  box-shadow: 0 10px 30px rgba(96,76,63,.07);
+}
+.ilog-classroom-hero::before {
+  content: "";
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  left: -45px;
+  bottom: -52px;
+  border-radius: 50%;
+  background: rgba(131,201,181,.12);
+}
+.ilog-classroom-hero::after {
+  content: "";
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  right: 35%;
+  top: -45px;
+  border-radius: 50%;
+  background: rgba(244,167,185,.10);
+}
+.ilog-hero-copy { z-index: 2; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.ilog-hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #a57482;
+  font-size: .78rem;
+  font-weight: 760;
+  margin-bottom: 7px;
+}
+.ilog-spark { color: #d6a161; }
+.ilog-classroom-hero h2 {
+  margin: 0 0 7px;
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  font-weight: 800;
+  color: #4b4650;
+  letter-spacing: -.045em;
+}
+.ilog-hero-class { color: #7f7780; font-size: .93rem; font-weight: 610; }
+.ilog-hero-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 17px; }
+.ilog-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 690;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.ilog-chip i { font-size: .72rem; }
+.ilog-chip-pink { background: #fff0f4; border-color: #f2dce3; color: #a96e80; }
+.ilog-chip-sky { background: #eef7fd; border-color: #dcecf7; color: #668fab; }
+.ilog-chip-mint { background: #edf9f5; border-color: #dcefe8; color: #658f83; }
+
+.ilog-hero-art { width: 330px; min-width: 260px; position: relative; overflow: hidden; align-self: stretch; }
+.ilog-art-sun {
+  position: absolute; right: 26px; top: 13px; width: 48px; height: 48px; border-radius: 50%;
+  background: #f8d78b; box-shadow: 0 0 0 10px rgba(248,215,139,.14);
+}
+.ilog-art-cloud { position: absolute; height: 26px; border-radius: 30px; background: rgba(255,255,255,.9); }
+.ilog-art-cloud::before, .ilog-art-cloud::after { content: ""; position: absolute; background: inherit; border-radius: 50%; }
+.ilog-art-cloud::before { width: 34px; height: 34px; left: 15px; top: -14px; }
+.ilog-art-cloud::after { width: 26px; height: 26px; right: 13px; top: -8px; }
+.ilog-art-cloud.c1 { width: 92px; right: 100px; top: 35px; }
+.ilog-art-cloud.c2 { width: 72px; right: 8px; top: 83px; opacity: .74; transform: scale(.85); }
+.ilog-art-hill { position: absolute; bottom: -58px; border-radius: 50% 50% 0 0; }
+.ilog-art-hill.h1 { width: 310px; height: 145px; right: -20px; background: #dff1e9; transform: rotate(-4deg); }
+.ilog-art-hill.h2 { width: 245px; height: 110px; right: 75px; bottom: -50px; background: #eaf4dc; transform: rotate(5deg); }
+.ilog-art-school {
+  position: absolute; right: 90px; bottom: 28px; width: 86px; height: 74px; border-radius: 15px 15px 8px 8px;
+  display: grid; place-items: center; color: #c48396; background: #fff7f3; border: 4px solid #f2c7b8;
+  box-shadow: 0 7px 18px rgba(121,92,80,.08); font-size: 2rem;
+}
+.ilog-art-star, .ilog-art-heart { position: absolute; color: #d8b7c2; }
+.ilog-art-star.s1 { right: 202px; top: 18px; font-size: 1rem; }
+.ilog-art-star.s2 { right: 35px; bottom: 25px; font-size: .75rem; color: #e5c978; }
+.ilog-art-heart { right: 190px; bottom: 49px; color: #d68fa3; font-size: 1.15rem; }
+.ilog-classroom-hero[data-season="spring"] { background: linear-gradient(125deg, #fff4f6, #fffaf2 45%, #eef9f5); }
+.ilog-classroom-hero[data-season="summer"] { background: linear-gradient(125deg, #f1f9ff, #fffceb 48%, #effaf7); }
+.ilog-classroom-hero[data-season="autumn"] { background: linear-gradient(125deg, #fff5ef, #fff8e5 48%, #f6f2ff); }
+.ilog-classroom-hero[data-season="winter"] { background: linear-gradient(125deg, #f4f8ff, #fff8fb 48%, #f3fbff); }
+
+.ilog-daily-board { margin-top: 0 !important; }
+.ilog-note-card { position: relative; overflow: hidden; min-height: 178px; box-shadow: none !important; }
+.ilog-note-card::after { content: ""; position: absolute; width: 90px; height: 90px; border-radius: 50%; right: -36px; bottom: -40px; opacity: .42; }
+.ilog-tasks-card { background: linear-gradient(140deg, #fffafa, #fffdf8) !important; border-color: #eee0df !important; }
+.ilog-tasks-card::after { background: #fbdfe6; }
+.ilog-event-card { background: linear-gradient(140deg, #f8fcff, #fbfffd) !important; border-color: #dfeaf0 !important; }
+.ilog-event-card::after { background: #d9f2ea; }
+.ilog-card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+.ilog-card-title-row h5 { margin: 2px 0 0; font-size: 1.03rem; font-weight: 770; color: #57515a; }
+.ilog-card-title-row h5 i { color: #c88295; }
+.ilog-event-card .ilog-card-title-row h5 i { color: #72a69a; }
+.ilog-mini-label { color: #b4a2a8; font-size: .62rem; font-weight: 800; letter-spacing: .12em; }
+.ilog-soft-btn { background: #fff !important; border: 1px solid #e8deda !important; color: #86747c !important; padding: 5px 9px !important; }
+.ilog-soft-btn:hover { background: #fff4f6 !important; }
+
+.ilog-task-list { display: flex; flex-direction: column; gap: 7px; }
+.ilog-task-row {
+  width: 100%; border: 0; background: transparent; padding: 7px 8px; border-radius: 10px;
+  display: grid; grid-template-columns: 24px minmax(0,1fr) auto; align-items: center; gap: 8px; text-align: left; color: #58545b;
+}
+.ilog-task-row:hover { background: rgba(255,238,242,.72); }
+.ilog-task-check { color: #d193a4; }
+.ilog-task-main { min-width: 0; display: flex; flex-direction: column; }
+.ilog-task-main strong { font-size: .87rem; font-weight: 690; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ilog-task-main small { color: #9b9198; font-size: .70rem; margin-top: 1px; }
+.ilog-due { color: #968d92; font-size: .69rem; font-weight: 620; white-space: nowrap; }
+.ilog-due.overdue { color: #c87587; }
+.ilog-more-note { padding: 3px 8px 0 40px; color: #a0969c; font-size: .70rem; }
+.ilog-empty-soft { color: #a0969b; font-size: .83rem; padding: 18px 4px; }
+.ilog-all-clear, .ilog-event-empty { display: flex; align-items: center; gap: 13px; min-height: 82px; padding: 10px; }
+.ilog-all-clear-icon { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: #fff0f4; color: #c47f92; font-size: 1.2rem; }
+.ilog-all-clear strong, .ilog-event-empty strong { display: block; font-size: .88rem; color: #696169; }
+.ilog-all-clear small, .ilog-event-empty small { display: block; color: #9d9499; font-size: .72rem; margin-top: 3px; }
+.ilog-event-empty > i { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; background: #eef7fd; color: #78a4c5; }
+
+.ilog-event-preview { min-height: 92px; display: flex; align-items: center; gap: 15px; padding: 8px 5px; }
+.ilog-event-date { width: 68px; height: 74px; border-radius: 18px; flex: 0 0 68px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #edf9f5; color: #69988a; border: 1px solid #d7ece5; }
+.ilog-event-date span { font-size: .68rem; font-weight: 670; }
+.ilog-event-date strong { font-size: 1.45rem; line-height: 1.1; }
+.ilog-event-preview.holiday .ilog-event-date { background: #fff0f4; color: #b97788; border-color: #f0d9df; }
+.ilog-event-copy { min-width: 0; }
+.ilog-event-badge { display: inline-block; padding: 3px 7px; border-radius: 999px; font-size: .64rem; background: #f2f6f8; color: #869198; margin-bottom: 5px; }
+.ilog-event-copy h6 { margin: 0 0 4px; font-size: .96rem; font-weight: 760; color: #5b575d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ilog-event-copy small { color: #9a9298; font-size: .72rem; }
+
+.ilog-student-summary .card { background: linear-gradient(135deg, #f3f0ff, #ffffff) !important; border-color: #e5def4 !important; }
+
+@media (max-width: 992px) {
+  .ilog-classroom-hero { min-height: 160px; }
+  .ilog-hero-art { width: 250px; min-width: 210px; }
+}
+@media (max-width: 768px) {
+  .ilog-classroom-hero { padding: 22px 20px; min-height: auto; }
+  .ilog-hero-art { display: none; }
+  .ilog-hero-chips { gap: 6px; }
+  .ilog-chip-mint { display: none; }
+  .ilog-task-row { grid-template-columns: 22px minmax(0,1fr); }
+  .ilog-due { grid-column: 2; }
+}
+@media print {
+  .ilog-classroom-hero, .ilog-daily-board { display: none !important; }
+}
