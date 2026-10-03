@@ -69,8 +69,10 @@ def _apply_theme(window) -> None:
             " css('ilog-modern-theme','theme.css');"
             " css('ilog-warm-dashboard-style','dashboard_warm.css');"
             " css('ilog-classroom-warm-style','classroom_warm.css');"
+            " css('ilog-academic-warm-style','academic_warm.css');"
             " js('ilog-warm-dashboard-script','dashboard_warm.js');"
             " js('ilog-classroom-warm-script','classroom_warm.js');"
+            " js('ilog-academic-warm-script','academic_warm.js');"
             " return true;"
             "})()"
         )
