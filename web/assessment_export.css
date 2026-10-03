@@ -22,11 +22,46 @@
 .ilog-assessment-export-actions > .btn:hover,
 .ilog-assessment-export-actions .dropdown > .btn:hover,
 .ilog-assess-hwpx-btn:hover { background:#f8effb !important; border-color:#c9a8d6 !important; }
+.ilog-assessment-export-actions .ilog-disclosure-check-btn {
+  border-color:#b9d8ca !important; background:#f8fffb !important; color:#3f765e !important;
+}
+.ilog-assessment-export-actions .ilog-disclosure-check-btn:hover {
+  background:#edf9f3 !important; border-color:#9bc7b3 !important;
+}
 .ilog-plan-actions .ilog-assess-hwpx-btn { margin-left:2px; }
+
+.ilog-disclosure-modal { border:0; border-radius:22px; overflow:hidden; }
+.ilog-disclosure-modal .modal-header { background:linear-gradient(135deg,#f7fcf9,#fffaf4); border-bottom:1px solid #e7eee9; }
+.ilog-disclosure-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+.ilog-disclosure-stat { border-radius:16px; padding:13px 15px; border:1px solid rgba(0,0,0,.05); }
+.ilog-disclosure-stat small { display:block; color:#6c746f; font-size:11px; margin-bottom:3px; }
+.ilog-disclosure-stat strong { display:block; color:#3f4943; font-size:20px; }
+.ilog-disclosure-stat.mint { background:#effaf5; }
+.ilog-disclosure-stat.sky { background:#f0f8ff; }
+.ilog-disclosure-stat.peach { background:#fff3eb; }
+.ilog-disclosure-note { padding:10px 12px; margin-bottom:12px; border-radius:13px; background:#fffaf0; color:#76674e; font-size:12px; line-height:1.55; }
+.ilog-disclosure-list { display:grid; gap:9px; }
+.ilog-disclosure-row { border:1px solid #e8ebe9; border-radius:15px; padding:12px 14px; background:#fff; }
+.ilog-disclosure-row.ready { border-color:#cce4d8; background:#fbfffd; }
+.ilog-disclosure-row.needs-work { border-color:#efd9ca; background:#fffdfb; }
+.ilog-disclosure-row-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.ilog-disclosure-row-head strong { color:#4e4b50; font-size:13px; }
+.ilog-disclosure-row-head span { flex:0 0 auto; font-size:11px; font-weight:800; border-radius:999px; padding:4px 8px; background:#edf7f1; color:#4d7b65; }
+.ilog-disclosure-row.needs-work .ilog-disclosure-row-head span { background:#fff0e7; color:#9b6548; }
+.ilog-disclosure-row-meta { margin-top:5px; color:#807a82; font-size:11.5px; }
+.ilog-disclosure-missing { margin-top:6px; color:#9b6548; font-size:12px; font-weight:700; }
+.ilog-disclosure-ok { margin-top:6px; color:#4d7b65; font-size:12px; }
+.ilog-disclosure-empty { padding:24px 14px; text-align:center; border:1px dashed #d9dedb; border-radius:15px; color:#8a8f8c; background:#fcfdfc; }
+.ilog-disclosure-export { background:#4f7f68 !important; border-color:#4f7f68 !important; color:#fff !important; font-weight:800; border-radius:12px !important; }
+.ilog-disclosure-export:hover { background:#426f5b !important; color:#fff !important; }
+.ilog-disclosure-footer { gap:8px; }
+
 @media (max-width: 760px) {
   .ilog-assessment-export-bar { align-items:stretch; }
   .ilog-assessment-export-actions { width:100%; }
   .ilog-assessment-export-actions > .btn,
   .ilog-assessment-export-actions > .dropdown { flex:1 1 145px; }
   .ilog-assessment-export-actions .dropdown > .btn { width:100%; }
+  .ilog-disclosure-summary { grid-template-columns:1fr; }
+  .ilog-disclosure-row-head { align-items:flex-start; }
 }
