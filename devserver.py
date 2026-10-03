@@ -39,11 +39,13 @@ class Handler(SimpleHTTPRequestHandler):
                     '<link rel="stylesheet" href="academic_warm.css" id="ilog-academic-warm-style">',
                     '<link rel="stylesheet" href="workdesk_warm.css" id="ilog-workdesk-warm-style">',
                     '<link rel="stylesheet" href="assessment_studio.css" id="ilog-assessment-studio-style">',
+                    '<link rel="stylesheet" href="neis_plan_import.css" id="ilog-neis-plan-import-style">',
                     '<script src="dashboard_warm.js" id="ilog-warm-dashboard-script" defer></script>',
                     '<script src="classroom_warm.js" id="ilog-classroom-warm-script" defer></script>',
                     '<script src="academic_warm.js" id="ilog-academic-warm-script" defer></script>',
                     '<script src="workdesk_warm.js" id="ilog-workdesk-warm-script" defer></script>',
                     '<script src="assessment_studio.js" id="ilog-assessment-studio-script" defer></script>',
+                    '<script src="neis_plan_import.js" id="ilog-neis-plan-import-script" defer></script>',
                 ]
                 missing = [r for r in resources if r not in html]
                 if missing:
