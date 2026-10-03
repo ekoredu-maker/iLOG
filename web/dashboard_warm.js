@@ -7,7 +7,7 @@
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   function todayStr() {
-    try { if (window.DBManager && DBManager.getTodayStr) return DBManager.getTodayStr(); } catch (_) {}
+    try { if (typeof DBManager !== 'undefined' && DBManager.getTodayStr) return DBManager.getTodayStr(); } catch (_) {}
     return new Date().toLocaleDateString('en-CA');
   }
 
@@ -61,7 +61,6 @@
       summary.parentNode.insertBefore(hero, summary);
     }
 
-    // 기존 '시스템 정상 운영중' 카드는 실무적으로 더 유용한 학생 수 카드로 전환
     const cards = summary.querySelectorAll(':scope > .col-md-4');
     if (cards.length >= 3) {
       const third = cards[2];
@@ -119,7 +118,7 @@
     const dash = $('#dashboard');
     const login = $('#login-overlay');
     if (!dash || !dash.classList.contains('active') || (login && login.style.display !== 'none')) return;
-    if (!window.SettingsRepo || !window.StudentRepo || !window.TaskRepo || !window.SchoolEventRepo) return;
+    if (typeof SettingsRepo === 'undefined' || typeof StudentRepo === 'undefined' || typeof TaskRepo === 'undefined' || typeof SchoolEventRepo === 'undefined') return;
 
     try {
       const [settings, students, tasks, events] = await Promise.all([
@@ -152,7 +151,6 @@
       renderTasks(tasks, today);
       renderEvent(events, today);
     } catch (e) {
-      // 대시보드 꾸밈 실패가 본 기능을 방해하지 않도록 조용히 넘긴다.
       console.debug('warm dashboard:', e);
     }
   }
@@ -201,7 +199,7 @@
 
   function go(target) {
     try {
-      if (typeof window.navigate === 'function') return window.navigate(target);
+      if (typeof navigate === 'function') return navigate(target);
       const link = document.querySelector(`#menu-list .nav-link[data-target="${target}"]`);
       if (link) link.click();
     } catch (_) {}
@@ -220,7 +218,6 @@
     const dash = $('#dashboard');
     if (dash) new MutationObserver(() => { if (dash.classList.contains('active')) setTimeout(refresh, 120); })
       .observe(dash, { attributes: true, attributeFilter: ['class'] });
-    // 기존 loadDashboard가 데이터를 바꾼 뒤에도 학생수·할일·일정이 자연스럽게 갱신되도록 가볍게 확인
     setInterval(refresh, 7000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
   }
