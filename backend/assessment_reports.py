@@ -2,6 +2,7 @@
 
 assessment_plans / assessment_tasks / assessment_rubrics 에 저장된 자료를
 학교 제출·보관에 적합한 A4 한글(HWPX) 문서로 만든다.
+묶음 출력은 첫 장에 정보공시 제출용 교과별 평가계획 요약표를 붙인다.
 """
 from __future__ import annotations
 
@@ -32,6 +33,20 @@ def _class_header(settings: dict) -> str:
     return "  ·  ".join(parts)
 
 
+def _public_header(settings: dict, term: int | None = None) -> str:
+    year = settings.get("schoolYear") or date.today().year
+    school = settings.get("schoolName") or ""
+    grade = settings.get("grade") or ""
+    bits = [f"{year}학년도"]
+    if school:
+        bits.append(str(school))
+    if grade:
+        bits.append(f"{grade}학년")
+    if term in (1, 2):
+        bits.append(f"{term}학기")
+    return "  ·  ".join(bits)
+
+
 def _bundle(db: Database, plan_id: str) -> tuple[dict, list[dict], list[dict], dict]:
     plan = db.get("assessment_plans", plan_id)
     if not plan:
@@ -40,6 +55,42 @@ def _bundle(db: Database, plan_id: str) -> tuple[dict, list[dict], list[dict], d
     rubrics = sorted(db.query("assessment_rubrics", "planId", plan_id), key=lambda r: int(r.get("order") or 0))
     settings = db.get("settings", "global") or {}
     return plan, tasks, rubrics, settings
+
+
+def _summary_row(db: Database, plan: dict) -> list[str]:
+    tasks = db.query("assessment_tasks", "planId", plan.get("planId"))
+    rubrics = sorted(db.query("assessment_rubrics", "planId", plan.get("planId")), key=lambda r: int(r.get("order") or 0))
+    task = tasks[0] if tasks else {}
+    rubric = "\n".join(
+        f"{r.get('level') or ''}: {r.get('descriptor') or ''}".strip(": ")
+        for r in rubrics if r.get("level") or r.get("descriptor")
+    )
+    term = plan.get("term")
+    subject = plan.get("subjectName") or plan.get("subjectShort") or ""
+    first = f"{subject}\n{term}학기" if str(term) in ("1", "2") else subject
+    second = "\n".join(x for x in [plan.get("unit") or "", plan.get("title") or "", plan.get("date") or ""] if x)
+    third = "\n".join(x for x in [plan.get("standard") or "", plan.get("objective") or ""] if x)
+    method = " / ".join(x for x in [plan.get("domain") or "", plan.get("method") or ""] if x)
+    fourth = "\n".join(x for x in [method, task.get("description") or "", rubric] if x)
+    return [first, second, third, fourth]
+
+
+def _append_disclosure_summary(b: HwpxBuilder, db: Database, plans: list[dict], settings: dict, term: int | None = None) -> None:
+    b.title("교과별 평가계획", size=19, after=4)
+    b.para("정보공시 제출용 정리본", align="CENTER", bold=True, size=11, color="#5F4E67", after=4)
+    b.para(_public_header(settings, term), align="RIGHT", size=9.5, color="#555555", after=6)
+    b.para(
+        "학생 개인별 평가결과는 포함하지 않고, 저장된 수행평가 계획의 교과·단원·성취기준·평가방법·평가기준만 정리합니다.",
+        size=8.8, color="#555555", after=4, line=135,
+    )
+    rows = [["교과·학기", "단원·평가명·시기", "성취기준·학습목표", "평가방법·수행과제·평가기준"]]
+    rows += [_summary_row(db, p) for p in plans]
+    b.table(rows, [27, 39, 48, 56], header_rows=1,
+            align=["CENTER", "LEFT", "LEFT", "LEFT"], size=8.3, min_height_mm=9)
+    b.para(
+        "※ 공시 항목과 제출 형식은 해당 학년도 학교·교육청의 정보공시 안내를 최종 확인한 뒤 사용하세요.",
+        size=8.3, color="#666666", before=4, after=0, line=130,
+    )
 
 
 def _append_plan(b: HwpxBuilder, plan: dict, tasks: list[dict], rubrics: list[dict], settings: dict, *, page_break: bool = False) -> None:
@@ -55,8 +106,6 @@ def _append_plan(b: HwpxBuilder, plan: dict, tasks: list[dict], rubrics: list[di
         ["평가 방법", plan.get("method") or "", "작성 상태", "학생평가 연결" if plan.get("legacyEvalPlanId") else "계획"],
     ], [24, 61, 24, 61], header_cols=0, align=["CENTER", "LEFT", "CENTER", "LEFT"], size=9.5,
        bold_cells=[(r, c) for r in range(4) for c in (0, 2)])
-    # 제목 칸 음영
-    # table()은 header_cols=0이면 자동 음영이 없으므로 별도 표로 긴 항목을 구성한다.
     b.para("", size=2, after=1)
     b.table([
         ["성취기준", plan.get("standard") or ""],
@@ -111,9 +160,10 @@ def assessment_plans_hwpx(db: Database, term: int | None = None) -> tuple[str, b
         raise ValueError("출력할 수행평가 계획이 없습니다.")
     settings = db.get("settings", "global") or {}
     b = HwpxBuilder()
-    for i, plan in enumerate(plans):
+    _append_disclosure_summary(b, db, plans, settings, term)
+    for plan in plans:
         tasks = db.query("assessment_tasks", "planId", plan["planId"])
         rubrics = sorted(db.query("assessment_rubrics", "planId", plan["planId"]), key=lambda r: int(r.get("order") or 0))
-        _append_plan(b, plan, tasks, rubrics, settings, page_break=i > 0)
+        _append_plan(b, plan, tasks, rubrics, settings, page_break=True)
     suffix = f"_{term}학기" if term in (1, 2) else "_전체"
-    return f"수행평가계획{suffix}.hwpx", b.to_bytes()
+    return f"교과별_평가계획{suffix}.hwpx", b.to_bytes()
