@@ -1,0 +1,32 @@
+/* iLOG 수행평가 문서 출력 도구 */
+.ilog-assessment-export-bar {
+  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  margin:0 0 18px; padding:16px 18px; border:1px solid rgba(201,167,220,.55);
+  border-radius:20px; background:linear-gradient(135deg,#fffafd 0%,#fffdf6 55%,#f8fcff 100%);
+  box-shadow:0 7px 22px rgba(86,72,96,.07);
+}
+.ilog-assessment-export-copy { display:flex; align-items:center; gap:12px; min-width:260px; }
+.ilog-assessment-export-icon {
+  width:44px; height:44px; border-radius:15px; display:grid; place-items:center;
+  background:#f4e8f8; color:#805790; font-size:19px; flex:0 0 auto;
+}
+.ilog-assessment-export-copy strong { display:block; color:#4b3d50; font-size:15px; }
+.ilog-assessment-export-copy small { display:block; color:#817684; margin-top:2px; line-height:1.45; }
+.ilog-assessment-export-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.ilog-assessment-export-actions > .btn,
+.ilog-assessment-export-actions .dropdown > .btn,
+.ilog-assess-hwpx-btn {
+  border:1px solid #d8c4e0 !important; background:#fff !important; color:#6a4f73 !important;
+  border-radius:12px !important; font-weight:700;
+}
+.ilog-assessment-export-actions > .btn:hover,
+.ilog-assessment-export-actions .dropdown > .btn:hover,
+.ilog-assess-hwpx-btn:hover { background:#f8effb !important; border-color:#c9a8d6 !important; }
+.ilog-plan-actions .ilog-assess-hwpx-btn { margin-left:2px; }
+@media (max-width: 760px) {
+  .ilog-assessment-export-bar { align-items:stretch; }
+  .ilog-assessment-export-actions { width:100%; }
+  .ilog-assessment-export-actions > .btn,
+  .ilog-assessment-export-actions > .dropdown { flex:1 1 145px; }
+  .ilog-assessment-export-actions .dropdown > .btn { width:100%; }
+}
