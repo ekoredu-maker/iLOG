@@ -27,6 +27,25 @@ class Handler(SimpleHTTPRequestHandler):
         if os.environ.get("ILOG_DEV_VERBOSE"):
             super().log_message(fmt, *args)
 
+    def do_GET(self):
+        """개발/E2E 브라우저에도 데스크톱과 같은 modern theme.css를 적용한다."""
+        if self.path in ("/", "/index.html"):
+            try:
+                html = (BASE / "web" / "index.html").read_text(encoding="utf-8")
+                marker = '<link rel="stylesheet" href="theme.css" id="ilog-modern-theme">'
+                if marker not in html:
+                    html = html.replace("</head>", f"    {marker}\n</head>", 1)
+                data = html.encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            except Exception:
+                traceback.print_exc()
+        super().do_GET()
+
     def do_POST(self):
         if not self.path.startswith("/api/"):
             self.send_error(404)
