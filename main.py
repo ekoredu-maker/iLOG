@@ -61,15 +61,17 @@ SELFTEST = os.environ.get("ILOG_SELFTEST")
 
 
 def _apply_theme(window) -> None:
-    """기존 HTML/JS를 건드리지 않고 modern theme.css를 덧씌운다."""
+    """기존 HTML/JS를 건드리지 않고 UI 테마와 대시보드 확장 레이어를 덧씌운다."""
     try:
         window.events.loaded.wait(60)
         window.evaluate_js(
             "(function(){"
-            " if(document.getElementById('ilog-modern-theme')) return true;"
-            " const l=document.createElement('link');"
-            " l.id='ilog-modern-theme'; l.rel='stylesheet'; l.href='theme.css';"
-            " document.head.appendChild(l); return true;"
+            " function css(id,href){ if(document.getElementById(id)) return; const l=document.createElement('link'); l.id=id; l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }"
+            " function js(id,src){ if(document.getElementById(id)) return; const s=document.createElement('script'); s.id=id; s.src=src; s.defer=true; document.body.appendChild(s); }"
+            " css('ilog-modern-theme','theme.css');"
+            " css('ilog-warm-dashboard-style','dashboard_warm.css');"
+            " js('ilog-warm-dashboard-script','dashboard_warm.js');"
+            " return true;"
             "})()"
         )
     except Exception:
