@@ -24,7 +24,7 @@ from pathlib import Path
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 KEY_PATHS: dict[str, str] = {
     "settings": "id",
@@ -37,6 +37,9 @@ KEY_PATHS: dict[str, str] = {
     "experiential": "expId",
     "eval_plans": "planId",
     "eval_scores": "scoreId",
+    "assessment_plans": "planId",
+    "assessment_tasks": "taskId",
+    "assessment_rubrics": "rubricId",
     "school_events": "eventId",
     "annual_schedule": "date",
     "incidents": "incidentId",
