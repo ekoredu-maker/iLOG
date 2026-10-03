@@ -37,7 +37,7 @@
       const d = new Date(Date.UTC(1899, 11, 30) + Math.floor(v) * 86400000);
       return d.toISOString().slice(0, 10);
     }
-    let s = String(v).trim().replace(/\([^)]*\)$/, '').trim();
+    const s = String(v).trim().replace(/\([^)]*\)$/, '').trim();
     let m = s.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
     let y, mo, d;
     if (m) { y = +m[1]; mo = +m[2]; d = +m[3]; }
@@ -73,7 +73,10 @@
       const populated = row.filter(nonempty).length;
       if (score > best.score || (score === best.score && populated > 2)) best = { row: ri, score, mapping };
     });
-    if (best.score < 3) best.row = Math.min(rows.findIndex(r => r.filter(nonempty).length >= 3), 0);
+    if (best.score < 3) {
+      const fallback = rows.findIndex(r => r.filter(nonempty).length >= 3);
+      best.row = fallback >= 0 ? fallback : 0;
+    }
     return best;
   }
 
@@ -113,7 +116,7 @@
                 <div class="ilog-neis-step-title"><span class="ilog-neis-num">2</span>제목행과 열 확인</div>
                 <div class="row g-3 mb-3"><div class="col-lg-5"><label class="form-label">제목행</label><select id="neis-header-row" class="form-select form-select-sm"></select></div><div class="col-lg-7 d-flex align-items-end"><div id="neis-detected" class="ilog-neis-detected"></div></div></div>
                 <div id="neis-map-grid" class="ilog-neis-map-grid"></div>
-                <div class="ilog-neis-help mt-3">날짜·교시가 있으면 해당 수업에 우선 연결합니다. 날짜가 없으면 차시 순서대로 연결하므로 아래에서 학기를 선택하세요.</div>
+                <div class="ilog-neis-help mt-3">날짜·교시가 있으면 해당 수업에만 연결합니다. 날짜 열을 사용하지 않을 때는 차시 순서대로 연결하므로 아래에서 학기를 선택하세요.</div>
                 <div id="neis-preview" class="ilog-neis-preview"></div>
               </div>
               <div class="ilog-neis-step">
@@ -265,17 +268,22 @@
         if (rec.subject && !subjectMatches(rec.subject, sub)) { subjectSkipped++; return; }
         if (selectedTerm && rec.term && rec.term !== selectedTerm) return;
         let slot = null;
-        if (rec.date && inTerm(rec.date, selectedTerm)) {
+        if (rec.date) {
+          if (!inTerm(rec.date, selectedTerm)) return;
           const day = dayMap.get(rec.date);
           if (day) {
             const candidates = day.subjects.filter(s => [sub.name, sub.shortName].includes(s.name));
             const lesson = rec.period ? candidates.find(s => Number(s.period) === rec.period) : candidates.find(s => !used.has(`${rec.date}|${s.period}`));
             if (lesson) slot = { day, lesson, key:`${rec.date}|${lesson.period}` };
           }
+          // 날짜가 명시된 행은 다른 날짜로 밀어 넣지 않는다. 잘못된 연결을 막기 위한 안전장치.
+          if (!slot) { unmatched++; return; }
+        } else {
+          if (rec.lessonSeq > 0 && rec.lessonSeq <= slots.length) slot = slots[rec.lessonSeq - 1];
+          if (!slot || used.has(slot.key)) slot = nextSlot();
+          if (!slot) { unmatched++; return; }
         }
-        if (!slot && rec.lessonSeq > 0 && rec.lessonSeq <= slots.length) slot = slots[rec.lessonSeq - 1];
-        if (!slot) slot = nextSlot();
-        if (!slot) { unmatched++; return; }
+
         used.add(slot.key);
         const lesson = slot.lesson;
         const patch = { unit:rec.unit, objective:rec.objective, content:rec.content, standard:rec.standard };
@@ -296,7 +304,7 @@
       if (days.length) await DBManager.putMany('annual_schedule', days);
       const result = $('#neis-import-result');
       result.className = 'ilog-neis-result show' + (unmatched ? ' warning' : '');
-      result.innerHTML = `<strong>${applied}개 차시 반영</strong> · 변경된 수업일 ${days.length}일${skippedExisting ? ` · 기존 내용 보호 ${skippedExisting}칸` : ''}${unmatched ? ` · 연결 못한 행 ${unmatched}개` : ''}${subjectSkipped ? ` · 다른 교과 행 제외 ${subjectSkipped}개` : ''}`;
+      result.innerHTML = `<strong>${applied}개 차시 반영</strong> · 변경된 수업일 ${days.length}일${skippedExisting ? ` · 기존 내용 보호 ${skippedExisting}칸` : ''}${unmatched ? ` · 날짜/교시 불일치 ${unmatched}개` : ''}${subjectSkipped ? ` · 다른 교과 행 제외 ${subjectSkipped}개` : ''}`;
       showToast(`${applied}개 차시를 지도계획에 반영했습니다.`, applied ? 'success' : 'warning');
       if (typeof navigate === 'function') await navigate('assessment');
     } catch (e) { showError(e); }
