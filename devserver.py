@@ -37,9 +37,11 @@ class Handler(SimpleHTTPRequestHandler):
                     '<link rel="stylesheet" href="dashboard_warm.css" id="ilog-warm-dashboard-style">',
                     '<link rel="stylesheet" href="classroom_warm.css" id="ilog-classroom-warm-style">',
                     '<link rel="stylesheet" href="academic_warm.css" id="ilog-academic-warm-style">',
+                    '<link rel="stylesheet" href="workdesk_warm.css" id="ilog-workdesk-warm-style">',
                     '<script src="dashboard_warm.js" id="ilog-warm-dashboard-script" defer></script>',
                     '<script src="classroom_warm.js" id="ilog-classroom-warm-script" defer></script>',
                     '<script src="academic_warm.js" id="ilog-academic-warm-script" defer></script>',
+                    '<script src="workdesk_warm.js" id="ilog-workdesk-warm-script" defer></script>',
                 ]
                 missing = [r for r in resources if r not in html]
                 if missing:
