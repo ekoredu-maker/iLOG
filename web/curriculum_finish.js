@@ -49,7 +49,8 @@
     const validChosen = sorted.some(p => p.packId === chosen) ? chosen : (sorted.find(isNational)?.packId || '');
     const opts = sorted.map(p => {
       const mark = isNational(p) ? '★ ' : '';
-      return `<option value="${esc(p.packId)}" ${p.packId === validChosen ? 'selected' : ''}>${mark}${esc(p.publisher)}${p.curriculum ? ' · ' + esc(p.curriculum) : ''} (${p.lessonCount}주제)</option>`;
+      const countLabel = p.adaptive ? `${p.lessonCount}주제` : `${p.lessonCount}차시`;
+      return `<option value="${esc(p.packId)}" ${p.packId === validChosen ? 'selected' : ''}>${mark}${esc(p.publisher)}${p.curriculum ? ' · ' + esc(p.curriculum) : ''} (${countLabel})</option>`;
     }).join('');
     tr.innerHTML = `<td class="fw-bold">${esc(subject.name)}</td>
       <td><select class="form-select form-select-sm">${validChosen ? '' : '<option value="">자료 선택</option>'}${opts}</select></td>
@@ -121,7 +122,8 @@
     packs.forEach(p => {
       const tr = document.createElement('tr');
       const badge = isNational(p) ? '<span class="badge bg-success">국가수준 기본 탑재</span>' : (p.builtin ? '<span class="badge bg-secondary">기본 탑재</span>' : '<button class="btn btn-sm btn-outline-danger">삭제</button>');
-      tr.innerHTML = `<td>${p.grade}</td><td>${esc(p.subject)}</td><td>${esc(p.publisher)}</td><td class="small">${esc(p.curriculum || '')}</td><td>${p.lessonCount}개 기본주제${p.adaptive ? ' <span class="text-success small">(연간 차시에 자동 확장)</span>' : ''}</td><td>${badge}</td>`;
+      const countText = p.adaptive ? `${p.lessonCount}개 기본주제 <span class="text-success small">(연간 차시에 자동 확장)</span>` : `${p.lessonCount}차시`;
+      tr.innerHTML = `<td>${p.grade}</td><td>${esc(p.subject)}</td><td>${esc(p.publisher)}</td><td class="small">${esc(p.curriculum || '')}</td><td>${countText}</td><td>${badge}</td>`;
       const del = tr.querySelector('button');
       if (del) del.addEventListener('click', async () => {
         try {
