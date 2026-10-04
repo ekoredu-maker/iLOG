@@ -1,14 +1,20 @@
-"""학급경영록 출력에 수행평가 계획을 자동 포함한다.
+"""학급경영록 출력 확장.
 
-기존 reports.py의 안정된 출력 코드는 그대로 두고, 생성된 결과에
-'수행평가계획' 영역만 추가하는 얇은 확장 계층이다.
+기존 reports.py의 출력 흐름을 유지하면서
+- 국가 학년군 기준 + 학교 편성 + 연간 계획 + 현재 이수 시수
+- 주간 과목별 시수
+- 월간 과목별 시수
+- 수행평가 계획
+을 학급경영록에 추가한다.
 """
 from __future__ import annotations
 
 import io
+import re
 
 from openpyxl import load_workbook
 
+from . import instruction_hours as ih
 from . import reports
 from .db import Database
 from .excel_io import setup_print, workbook_bytes
@@ -40,18 +46,81 @@ def _assessment_rows(db: Database) -> list[list]:
     return rows
 
 
+def _insert_hours_sheets(wb, db: Database, rd: reports.ReportData) -> None:
+    # 기존 reports.py의 '시수현황'은 subject.hours 값을 연간 기준처럼 사용하므로 제거한다.
+    if "시수현황" in wb.sheetnames:
+        wb.remove(wb["시수현황"])
+
+    try:
+        idx = wb.sheetnames.index("기초시간표")
+    except ValueError:
+        idx = 1
+
+    snap = ih.snapshot(db)
+
+    # 1) 과목별 편성·계획·이수 시간
+    ws = wb.create_sheet("과목별편성시간", idx)
+    reports._title(ws, "교육과정 편성·계획·이수 시간", rd.header_line, 8)
+    ws.cell(row=3, column=1, value=f"국가 기준은 {snap['band']}학년군 2년간 기준 수업 시수이며, 당해 학년 편성시수는 학교 교육과정에 따라 입력합니다.")
+    ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=8)
+
+    nrows = [[r["group"], r["nationalBand"], r["schoolPlan"] if r["schoolPlan"] is not None else "-",
+              r["scheduled"], r["completed"]] for r in snap["national"]]
+    end = reports._table(ws, 5,
+        ["교과(군)", "국가 학년군 기준(2년)", "학교 당해학년 편성합", "연간시간표 계획합", "현재 이수합"],
+        nrows, [22, 18, 18, 18, 16], center_cols=(2, 3, 4, 5))
+
+    start = end + 3
+    ws.cell(row=start - 1, column=1, value="당해 학년 과목별 편성·운영")
+    rows = []
+    for r in snap["subjects"]:
+        diff = r["diff"] if r["diff"] is not None else "-"
+        rows.append([r["name"], r["schoolPlan"] if r["schoolPlan"] is not None else "-", r["scheduled"],
+                     r["t1"], r["t2"], r["completed"], r["remaining"], diff])
+    reports._table(ws, start,
+        ["과목", "학교 편성시수", "연간 계획시수", "1학기", "2학기", "현재 이수", "잔여 예정", "편성 대비 계획 증감"],
+        rows or [["등록된 과목 없음", "-", 0, 0, 0, 0, 0, "-"]],
+        [18, 15, 15, 10, 10, 12, 12, 18], center_cols=range(2, 9))
+    ws.freeze_panes = f"A{start + 1}"
+    setup_print(ws, landscape=True, header_text="교육과정 편성·계획·이수 시간")
+
+    # 2) 주간 과목별 시수
+    idx += 1
+    weekly = snap["weekly"]
+    ws = wb.create_sheet("주간과목별시수", idx)
+    headers = ["주", "기간"] + weekly["subjects"] + ["합계"]
+    reports._title(ws, "주간 과목별 수업 시수", rd.header_line, len(headers))
+    rows = [[r["label"], f"{r['start']}~{r['end']}", *r["values"], r["total"]] for r in weekly["rows"]]
+    widths = [8, 23] + [10] * len(weekly["subjects"]) + [9]
+    reports._table(ws, 4, headers, rows or [["", "계획 없음"] + [0] * (len(headers) - 2)], widths, center_cols=range(1, len(headers) + 1))
+    ws.freeze_panes = "C5"
+    setup_print(ws, landscape=True, title_rows="4:4", header_text="주간 과목별 수업 시수")
+
+    # 3) 월간 과목별 시수
+    idx += 1
+    monthly = snap["monthly"]
+    ws = wb.create_sheet("월간과목별시수", idx)
+    headers = ["월"] + monthly["subjects"] + ["합계"]
+    reports._title(ws, "월간 과목별 수업 시수", rd.header_line, len(headers))
+    rows = [[r["label"], *r["values"], r["total"]] for r in monthly["rows"]]
+    widths = [14] + [10] * len(monthly["subjects"]) + [9]
+    reports._table(ws, 4, headers, rows or [["계획 없음"] + [0] * (len(headers) - 1)], widths, center_cols=range(1, len(headers) + 1))
+    ws.freeze_panes = "B5"
+    setup_print(ws, landscape=True, title_rows="4:4", header_text="월간 과목별 수업 시수")
+
+
 def class_book_xlsx(db: Database, include_incidents: bool = False) -> bytes:
     base = reports.class_book_xlsx(db, include_incidents)
     wb = load_workbook(io.BytesIO(base))
     rd = reports.ReportData(db)
-    rows = _assessment_rows(db)
 
-    # 지도계획 바로 뒤에 수행평가 계획을 배치한다.
-    idx = 0
-    for i, ws0 in enumerate(wb.worksheets):
-        if ws0.title == "지도계획":
-            idx = i + 1
-            break
+    _insert_hours_sheets(wb, db, rd)
+
+    rows = _assessment_rows(db)
+    try:
+        idx = wb.sheetnames.index("지도계획") + 1
+    except ValueError:
+        idx = len(wb.worksheets)
     ws = wb.create_sheet("수행평가계획", idx)
     headers = ["과목", "학기", "단원", "평가명", "시기", "영역", "방법", "성취기준", "학습목표", "수행과제명", "수행과제", "평가기준"]
     reports._title(ws, "수행평가 계획", rd.header_line, len(headers))
@@ -66,11 +135,44 @@ def class_book_xlsx(db: Database, include_incidents: bool = False) -> bytes:
     return workbook_bytes(wb)
 
 
-def _assessment_html(db: Database) -> str:
+def _hours_html(db: Database) -> str:
+    snap = ih.snapshot(db)
+    out = [
+        '<h2 class="page-break">2. 과목별 편성·계획·이수 시간</h2>',
+        f'<div class="infobox">국가 기준은 <b>{reports.esc(snap["band"])}학년군</b> 2년간 기준 수업 시수입니다. '
+        '학교의 당해 학년 편성시수와 iLOG 연간 시간표의 계획·이수시수를 구분하여 표시합니다.</div>',
+    ]
+    out.append(reports._html_table(
+        ["교과(군)", "국가 학년군 기준(2년)", "학교 당해학년 편성합", "연간 계획합", "현재 이수합"],
+        [[r["group"], r["nationalBand"], r["schoolPlan"] if r["schoolPlan"] is not None else "-", r["scheduled"], r["completed"]] for r in snap["national"]],
+        ["28%", "18%", "18%", "18%", "18%"], center=range(1, 5)))
+    out.append('<h3>당해 학년 과목별 편성·운영</h3>')
+    out.append(reports._html_table(
+        ["과목", "학교 편성", "연간 계획", "1학기", "2학기", "현재 이수", "잔여", "증감"],
+        [[r["name"], r["schoolPlan"] if r["schoolPlan"] is not None else "-", r["scheduled"], r["t1"], r["t2"], r["completed"], r["remaining"], r["diff"] if r["diff"] is not None else "-"] for r in snap["subjects"]],
+        ["18%", "12%", "12%", "10%", "10%", "12%", "10%", "16%"], center=range(1, 8), empty="등록된 과목 없음"))
+
+    weekly = snap["weekly"]
+    out.append('<h2 class="page-break">3. 주간 과목별 시수</h2>')
+    out.append(reports._html_table(
+        ["주", "기간", *weekly["subjects"], "합계"],
+        [[r["label"], f"{r['start']}~{r['end']}", *r["values"], r["total"]] for r in weekly["rows"]],
+        center=range(2, len(weekly["subjects"]) + 3), empty="연간 시간표가 없습니다."))
+
+    monthly = snap["monthly"]
+    out.append('<h2 class="page-break">4. 월간 과목별 시수</h2>')
+    out.append(reports._html_table(
+        ["월", *monthly["subjects"], "합계"],
+        [[r["label"], *r["values"], r["total"]] for r in monthly["rows"]],
+        center=range(1, len(monthly["subjects"]) + 2), empty="연간 시간표가 없습니다."))
+    return "".join(out)
+
+
+def _assessment_html(db: Database, section_no: int = 7) -> str:
     rows = _assessment_rows(db)
     if not rows:
-        return '<h2 class="page-break">5. 수행평가 계획</h2><p class="empty">등록된 수행평가 계획이 없습니다.</p>'
-    out = ['<h2 class="page-break">5. 수행평가 계획</h2>']
+        return f'<h2 class="page-break">{section_no}. 수행평가 계획</h2><p class="empty">등록된 수행평가 계획이 없습니다.</p>'
+    out = [f'<h2 class="page-break">{section_no}. 수행평가 계획</h2>']
     for r in rows:
         out.append(f"<h3>[{reports.esc(r[0])}] {reports.esc(r[3])}</h3>")
         out.append(
@@ -88,12 +190,24 @@ def _assessment_html(db: Database) -> str:
 
 def class_book_html(db: Database, include_incidents: bool = False) -> str:
     html = reports.class_book_html(db, include_incidents)
+
+    # 기존 3번 '과목별 이수 시간 현황'은 subject.hours 기반의 옛 집계라 제거한다.
+    html = re.sub(
+        r'<h2>3\. 과목별 이수 시간 현황</h2>.*?(?=<h2 class="page-break">4\. 과목별 연간 지도 계획</h2>)',
+        '', html, count=1, flags=re.S,
+    )
+
+    old_timetable = '<h2>2. 주간 기초 시간표</h2>'
+    if old_timetable in html:
+        html = html.replace(old_timetable, _hours_html(db) + '<h2 class="page-break">5. 주간 기초 시간표</h2>', 1)
+    html = html.replace('<h2 class="page-break">4. 과목별 연간 지도 계획</h2>', '<h2 class="page-break">6. 과목별 연간 지도 계획</h2>', 1)
+
     marker = '<h2 class="page-break">5. 학생 평가 기록</h2>'
     if marker not in html:
         return html
-    html = html.replace(marker, _assessment_html(db) + '<h2 class="page-break">6. 학생 평가 기록</h2>', 1)
-    html = html.replace('<h2 class="page-break">6. 학생 출결 상황</h2>', '<h2 class="page-break">7. 학생 출결 상황</h2>', 1)
-    html = html.replace('<h2 class="page-break">7. 학생 상담 일지</h2>', '<h2 class="page-break">8. 학생 상담 일지</h2>', 1)
-    html = html.replace('<h2>8. 교외체험학습 현황</h2>', '<h2>9. 교외체험학습 현황</h2>', 1)
-    html = html.replace('<h2 class="page-break">9. 학생 사안 기록 (대외비)</h2>', '<h2 class="page-break">10. 학생 사안 기록 (대외비)</h2>', 1)
+    html = html.replace(marker, _assessment_html(db, 7) + '<h2 class="page-break">8. 학생 평가 기록</h2>', 1)
+    html = html.replace('<h2 class="page-break">6. 학생 출결 상황</h2>', '<h2 class="page-break">9. 학생 출결 상황</h2>', 1)
+    html = html.replace('<h2 class="page-break">7. 학생 상담 일지</h2>', '<h2 class="page-break">10. 학생 상담 일지</h2>', 1)
+    html = html.replace('<h2>8. 교외체험학습 현황</h2>', '<h2>11. 교외체험학습 현황</h2>', 1)
+    html = html.replace('<h2 class="page-break">9. 학생 사안 기록 (대외비)</h2>', '<h2 class="page-break">12. 학생 사안 기록 (대외비)</h2>', 1)
     return html
