@@ -32,6 +32,11 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path in ("/", "/index.html"):
             try:
                 html = (BASE / "web" / "index.html").read_text(encoding="utf-8")
+                # 지역 한정 사용권 문구는 더 이상 표시하지 않는다. iLOG 자체에는 지역별 권한 제한 로직이 없다.
+                html = html.replace(
+                    '  <div class="mt-4 text-white-50 small">제천의 선생님들에게만 무상사용 권리가 있습니다.</div>\n',
+                    '',
+                )
                 resources = [
                     '<link rel="stylesheet" href="theme.css" id="ilog-modern-theme">',
                     '<link rel="stylesheet" href="dashboard_warm.css" id="ilog-warm-dashboard-style">',
