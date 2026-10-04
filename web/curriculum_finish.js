@@ -79,12 +79,15 @@
       const keep = document.getElementById('cur-keep-existing')?.checked;
       const label = isNational(p) ? '국가수준 기본안' : p.publisher;
       if (!confirm(`${subject.name} 과목에 [${label}]을 적용합니다.\n${keep ? '이미 입력한 내용은 유지합니다.' : '이미 입력한 지도내용도 덮어씁니다.'}`)) return;
+      btn.disabled = true;
+      setBusy(true);
       try {
         const r = await api.curriculum_apply(sel.value, subject.shortName, !keep);
         showToast(`${subject.name}: ${r.applied}칸 적용` + (r.skipped ? `, 기존 내용 ${r.skipped}칸 유지` : ''), 'success');
         await refresh();
         if (document.getElementById('annual-plan')?.classList.contains('active')) await loadAnnualManage();
       } catch (e) { showError(e); }
+      finally { setBusy(false); btn.disabled = false; }
     });
     if (sel.value) refresh().catch(showError);
     return tr;
@@ -142,23 +145,79 @@
     const grade = Number(val('cur-grade')) || null;
     if (!grade) return;
     if (!confirm(`${grade}학년 담임 개설과목의 비어 있는 연간 지도내용에 2022 개정 국가수준 기본안을 채웁니다.\n교사가 이미 입력하거나 수정한 내용은 덮어쓰지 않습니다. 계속할까요?`)) return;
-    if (btn) btn.disabled = true;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>국가수준 기본안 적용 중...';
+    }
+    setBusy(true);
+    showToast('국가수준 기본안을 연간 지도계획에 적용하고 있습니다.', 'info');
+
     try {
-      const [packs, subs] = await Promise.all([api.curriculum_list(grade), SubjectRepo.getAll()]);
-      let applied = 0, skipped = 0, matched = 0;
-      for (const s of subs) {
-        const p = nationalMatch(packs, s);
-        if (!p) continue;
-        matched += 1;
-        const r = await api.curriculum_apply(p.packId, s.shortName, false);
-        applied += Number(r.applied || 0);
-        skipped += Number(r.skipped || 0);
+      const subs = await SubjectRepo.getAll();
+      let result;
+
+      // 데스크톱은 연간시간표를 한 번만 읽고/쓰는 Python 일괄 처리 경로를 사용한다.
+      if (Bridge.isDesktop() && typeof api.curriculum_apply_national_batch === 'function') {
+        result = await api.curriculum_apply_national_batch(
+          grade,
+          subs.map(s => ({ name: s.name, shortName: s.shortName })),
+          false
+        );
+      } else {
+        // 브라우저 개발 모드는 기존 API만으로 호환한다.
+        const packs = await api.curriculum_list(grade);
+        let applied = 0, skipped = 0, matched = 0;
+        for (const s of subs) {
+          const p = nationalMatch(packs, s);
+          if (!p) continue;
+          matched += 1;
+          const r = await api.curriculum_apply(p.packId, s.shortName, false);
+          applied += Number(r.applied || 0);
+          skipped += Number(r.skipped || 0);
+        }
+        result = { matched, applied, skipped };
       }
-      showToast(`국가수준 기본안: ${matched}과목, ${applied}차시 적용` + (skipped ? ` · 기존 ${skipped}차시 유지` : ''), 'success');
+
+      showToast(`국가수준 기본안: ${result.matched}과목, ${result.applied}차시 적용` + (result.skipped ? ` · 기존 ${result.skipped}차시 유지` : ''), 'success');
       await upgradedLoadCurriculumLibrary();
       if (document.getElementById('annual-plan')?.classList.contains('active')) await loadAnnualManage();
     } catch (e) { showError(e); }
-    finally { if (btn) btn.disabled = false; }
+    finally {
+      setBusy(false);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles me-1"></i>국가수준 기본안 전체 적용';
+      }
+    }
+  }
+
+  async function saveClassBookHwpx() {
+    const btn = document.getElementById('class-book-hwpx-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>HWPX 만드는 중...';
+    }
+    setBusy(true);
+    showToast('학급경영록 HWPX를 만들고 있습니다. 자료가 많으면 잠시 걸릴 수 있습니다.', 'info');
+    try {
+      let saved;
+      if (Bridge.isDesktop() && typeof api.build_and_save_file === 'function') {
+        // 큰 HWPX를 Python→JS→Python으로 base64 왕복하지 않고 Python 안에서 바로 저장한다.
+        saved = await api.build_and_save_file('class_curriculum_hwpx', {});
+      } else {
+        saved = await deliverFile('class_curriculum_hwpx', {});
+      }
+      if (saved) showToast('학급경영록 HWPX를 저장했습니다.', 'success');
+    } catch (e) {
+      showError(e);
+    } finally {
+      setBusy(false);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-file-alt me-1"></i>한글 HWPX';
+      }
+    }
   }
 
   function addClassBookHwpxButton() {
@@ -170,7 +229,7 @@
     btn.id = 'class-book-hwpx-btn';
     btn.innerHTML = '<i class="fas fa-file-alt me-1"></i>한글 HWPX';
     btn.title = '학급교육과정·시수·지도계획·평가·학생기록을 포함한 학급경영록';
-    btn.addEventListener('click', () => deliverFile('class_curriculum_hwpx').catch(showError));
+    btn.addEventListener('click', saveClassBookHwpx);
     excel.after(btn);
   }
 
