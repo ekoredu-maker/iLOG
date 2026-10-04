@@ -1,0 +1,28 @@
+#curriculum-management-panel .cm-card{background:#fffdf8;border:1px solid rgba(126,101,72,.18);border-radius:18px;padding:18px;box-shadow:0 8px 26px rgba(72,56,35,.06)}
+#curriculum-management-panel .cm-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+#curriculum-management-panel .cm-title{font-size:1.12rem;font-weight:800;color:#4b4035}
+#curriculum-management-panel .cm-desc{font-size:.88rem;color:#75685c;margin-top:5px;line-height:1.55}
+#curriculum-management-panel .cm-chips{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px;margin:16px 0}
+#curriculum-management-panel .cm-chips>div{border:1px solid rgba(126,101,72,.14);border-radius:14px;padding:11px 13px;background:rgba(255,255,255,.72)}
+#curriculum-management-panel .cm-chips small{display:block;color:#817568;margin-bottom:4px}
+#curriculum-management-panel .cm-chips b{font-size:1.02rem;color:#4b4035}
+#curriculum-management-panel .cm-section{border-top:1px dashed rgba(126,101,72,.22);padding-top:12px;margin-top:12px}
+#curriculum-management-panel .cm-section>summary{cursor:pointer;font-weight:800;color:#5c4e41;margin-bottom:10px}
+#curriculum-management-panel .cm-fields{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:12px}
+#curriculum-management-panel .cm-fields label{display:block;font-size:.85rem;font-weight:700;color:#5d5145}
+#curriculum-management-panel .cm-fields label span{display:block;margin-bottom:5px}
+#curriculum-management-panel .cm-fields textarea{font-weight:400;line-height:1.45;resize:vertical;background:#fff}
+#curriculum-management-panel table{font-size:.79rem;margin-bottom:0}
+#curriculum-management-panel th{background:#f7f0e7;white-space:nowrap;color:#5b4d40}
+#curriculum-management-panel td{text-align:center;vertical-align:middle}
+#curriculum-management-panel td:first-child{text-align:left}
+#curriculum-management-panel td:first-child small{display:block;color:#8a7b6e;margin-top:2px}
+#curriculum-management-panel .cm-hours{min-width:76px;text-align:center}
+#curriculum-management-panel .cm-status{display:inline-block;padding:3px 7px;border-radius:999px;font-size:.72rem;font-weight:700;white-space:nowrap}
+#curriculum-management-panel .cm-ok{background:#e8f5ed;color:#2f7044}
+#curriculum-management-panel .cm-warn{background:#fff1df;color:#9b6424}
+#curriculum-management-panel .cm-check{background:#e9f0fb;color:#446f9f}
+#curriculum-management-panel .cm-mini td{text-align:center;white-space:nowrap}
+#curriculum-management-panel .cm-note{margin-top:14px;padding:10px 12px;border-radius:12px;background:#f7f3ed;color:#75685c;font-size:.82rem}
+@media(max-width:1100px){#curriculum-management-panel .cm-chips{grid-template-columns:repeat(3,1fr)}#curriculum-management-panel .cm-fields{grid-template-columns:1fr}}
+@media(max-width:700px){#curriculum-management-panel .cm-chips{grid-template-columns:repeat(2,1fr)}#curriculum-management-panel .cm-card{padding:14px}}
