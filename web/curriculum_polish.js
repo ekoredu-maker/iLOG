@@ -12,6 +12,14 @@
   const norm = (v) => String(v ?? '').replace(/\s+/g, '').trim();
   const orderKey = (s) => `${ORDER_PREFIX}${Number(s.schoolYear) || new Date().getFullYear()}_${Number(s.grade) || 0}_${String(s.classNo || '0')}`;
 
+  function unlocked() {
+    try {
+      if (typeof isLocked !== 'undefined') return isLocked === false;
+    } catch (_) {}
+    const overlay = document.getElementById('login-overlay');
+    return !!overlay && getComputedStyle(overlay).display === 'none';
+  }
+
   function cacheSubjects(list) {
     byId.clear();
     aliasToId.clear();
@@ -87,7 +95,7 @@
   }
 
   async function enhanceSubjectRows() {
-    if (rowBusy) return;
+    if (!unlocked() || rowBusy) return;
     const tbody = document.getElementById('subject-list-body');
     if (!tbody) return;
     rowBusy = true;
@@ -209,7 +217,7 @@
   function polish() {
     installStyle();
     if (!labelPatched) patchLabels();
-    enhanceSubjectRows().catch(() => {});
+    if (unlocked()) enhanceSubjectRows().catch(() => {});
     renumberWeeks();
   }
 
@@ -217,13 +225,15 @@
     patchLabels();
     installStyle();
     const tbody = document.getElementById('subject-list-body');
-    if (tbody) new MutationObserver(() => setTimeout(enhanceSubjectRows, 10)).observe(tbody, {childList:true, subtree:false});
+    if (tbody) new MutationObserver(() => {
+      if (unlocked()) setTimeout(enhanceSubjectRows, 10);
+    }).observe(tbody, {childList:true, subtree:false});
 
     const annual = document.getElementById('annual-plan');
     if (annual) new MutationObserver(() => setTimeout(renumberWeeks, 20)).observe(annual, {childList:true, subtree:true});
 
     document.getElementById('tab-timetable')?.addEventListener('click', () => setTimeout(() => {
-      if (typeof loadTimetable === 'function') loadTimetable().catch(showError);
+      if (unlocked() && typeof loadTimetable === 'function') loadTimetable().catch(showError);
     }, 30));
 
     setTimeout(polish, 500);
