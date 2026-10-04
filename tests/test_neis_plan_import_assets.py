@@ -12,6 +12,7 @@ def test_neis_plan_import_assets_are_wired():
     assert "api.parse_excel" in js
     assert "DBManager.putMany('annual_schedule'" in js
     assert "neisPlanImportModal" in js
-    assert "neis_plan_import.css" in main and "neis_plan_import.js" in main
+    # 데스크톱은 main.py가 devserver.Handler를 통해 같은 최신 UI를 제공한다.
+    assert "from devserver import Handler" in main
     assert "neis_plan_import.css" in dev and "neis_plan_import.js" in dev
     assert ".ilog-neis-import-card" in css
