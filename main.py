@@ -17,6 +17,9 @@ from backend.api import APP_VERSION, Api
 from backend.db import Database
 
 
+WEBVIEW_PROFILE = "webview-v2"
+
+
 def resource_dir() -> Path:
     return Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 
@@ -38,7 +41,10 @@ def main() -> None:
     )
     api._set_window(window)
     try:
-        opts = dict(http_server=True, private_mode=False, storage_path=str(db.data_dir / "webview"))
+        # UI 캐시는 업무 데이터와 분리한다. 이전 WebView 프로필이 손상되거나
+        # 오래된 화면 자원을 잡고 있어 흰 화면이 되는 경우를 피하기 위해
+        # 프로필 세대를 별도 폴더로 관리한다. ilog.db/백업에는 영향이 없다.
+        opts = dict(http_server=True, private_mode=False, storage_path=str(db.data_dir / WEBVIEW_PROFILE))
         if sys.platform == "win32":
             opts["gui"] = "edgechromium"
         opts["func"] = _startup
