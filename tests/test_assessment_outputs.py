@@ -64,6 +64,9 @@ def test_class_book_includes_assessment_plan_in_xlsx_and_html(tmp_path):
     try:
         x = api.build_file("class_book_xlsx", {})
         wb = load_workbook(io.BytesIO(base64.b64decode(x["b64"])), data_only=True)
+        assert "과목별편성시간" in wb.sheetnames
+        assert "주간과목별시수" in wb.sheetnames
+        assert "월간과목별시수" in wb.sheetnames
         assert "수행평가계획" in wb.sheetnames
         ws = wb["수행평가계획"]
         values = "\n".join(str(c.value or "") for row in ws.iter_rows() for c in row)
@@ -71,8 +74,11 @@ def test_class_book_includes_assessment_plan_in_xlsx_and_html(tmp_path):
         assert "잘함: 근거를 들어 정확히 설명함" in values
 
         h = api.build_html("class_book", {})["html"]
-        assert "5. 수행평가 계획" in h
+        assert "2. 과목별 편성·계획·이수 시간" in h
+        assert "3. 주간 과목별 시수" in h
+        assert "4. 월간 과목별 시수" in h
+        assert "7. 수행평가 계획" in h
         assert "날씨 자료 분석 수행평가" in h
-        assert "6. 학생 평가 기록" in h
+        assert "8. 학생 평가 기록" in h
     finally:
         db.close()
