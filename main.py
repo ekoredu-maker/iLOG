@@ -17,9 +17,6 @@ from backend.api import APP_VERSION, Api
 from backend.db import Database
 
 
-WEBVIEW_PROFILE = "webview-v2"
-
-
 def resource_dir() -> Path:
     return Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 
@@ -41,10 +38,7 @@ def main() -> None:
     )
     api._set_window(window)
     try:
-        # UI 캐시는 업무 데이터와 분리한다. 이전 WebView 프로필이 손상되거나
-        # 오래된 화면 자원을 잡고 있어 흰 화면이 되는 경우를 피하기 위해
-        # 프로필 세대를 별도 폴더로 관리한다. ilog.db/백업에는 영향이 없다.
-        opts = dict(http_server=True, private_mode=False, storage_path=str(db.data_dir / WEBVIEW_PROFILE))
+        opts = dict(http_server=True, private_mode=False, storage_path=str(db.data_dir / "webview"))
         if sys.platform == "win32":
             opts["gui"] = "edgechromium"
         opts["func"] = _startup
@@ -62,67 +56,39 @@ def main() -> None:
 
 
 SELFTEST = os.environ.get("ILOG_SELFTEST")
-_RELOAD_HANDLERS = []  # pywebview loaded 콜백이 GC되지 않도록 보관
-
-
-def _inject_theme(window) -> None:
-    """현재 문서에 최신 UI 확장 레이어를 넣는다. 여러 번 호출해도 중복 삽입하지 않는다."""
-    window.evaluate_js(
-        "(function(){"
-        " function css(id,href){ if(document.getElementById(id)) return; const l=document.createElement('link'); l.id=id; l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }"
-        " function js(id,src){ if(document.getElementById(id)) return; const s=document.createElement('script'); s.id=id; s.src=src; s.defer=true; document.body.appendChild(s); }"
-        " css('ilog-modern-theme','theme.css');"
-        " css('ilog-warm-dashboard-style','dashboard_warm.css');"
-        " css('ilog-classroom-warm-style','classroom_warm.css');"
-        " css('ilog-academic-warm-style','academic_warm.css');"
-        " css('ilog-workdesk-warm-style','workdesk_warm.css');"
-        " css('ilog-assessment-studio-style','assessment_studio.css');"
-        " css('ilog-neis-plan-import-style','neis_plan_import.css');"
-        " css('ilog-assessment-export-style','assessment_export.css');"
-        " js('ilog-warm-dashboard-script','dashboard_warm.js');"
-        " js('ilog-classroom-warm-script','classroom_warm.js');"
-        " js('ilog-academic-warm-script','academic_warm.js');"
-        " js('ilog-workdesk-warm-script','workdesk_warm.js');"
-        " js('ilog-assessment-studio-script','assessment_studio.js');"
-        " js('ilog-neis-plan-import-script','neis_plan_import.js');"
-        " js('ilog-assessment-export-script','assessment_export.js');"
-        f" document.title='아이로그 iLOG v{APP_VERSION} - 초등담임 학급통합관리';"
-        f" document.querySelectorAll('h3,h5').forEach(function(el){{ if(/아이로그\\s+iLOG\\s+v[0-9.]+/.test(el.textContent||'')) el.innerHTML=el.innerHTML.replace(/iLOG\\s+v[0-9.]+/,'iLOG v{APP_VERSION}'); }});"
-        " return true;"
-        "})()"
-    )
 
 
 def _apply_theme(window) -> None:
-    """최초 로드가 끝난 뒤 UI 확장 레이어를 덧씌운다."""
+    """기존 HTML/JS를 건드리지 않고 UI 확장 레이어를 덧씌운다."""
     try:
         window.events.loaded.wait(60)
-        _inject_theme(window)
-    except Exception:
-        pass
-
-
-def _install_reload_hook(window) -> None:
-    """복구/초기화의 location.reload() 뒤에도 최신 UI를 다시 적용한다."""
-    def on_loaded(*_args):
-        # loaded 이벤트 스레드에서 바로 evaluate_js 하지 않고 별도 스레드에서 짧게 양보한다.
-        def run():
-            threading.Event().wait(0.05)
-            try:
-                _inject_theme(window)
-            except Exception:
-                pass
-        threading.Thread(target=run, daemon=True).start()
-
-    try:
-        window.events.loaded += on_loaded
-        _RELOAD_HANDLERS.append(on_loaded)
+        window.evaluate_js(
+            "(function(){"
+            " function css(id,href){ if(document.getElementById(id)) return; const l=document.createElement('link'); l.id=id; l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }"
+            " function js(id,src){ if(document.getElementById(id)) return; const s=document.createElement('script'); s.id=id; s.src=src; s.defer=true; document.body.appendChild(s); }"
+            " css('ilog-modern-theme','theme.css');"
+            " css('ilog-warm-dashboard-style','dashboard_warm.css');"
+            " css('ilog-classroom-warm-style','classroom_warm.css');"
+            " css('ilog-academic-warm-style','academic_warm.css');"
+            " css('ilog-workdesk-warm-style','workdesk_warm.css');"
+            " css('ilog-assessment-studio-style','assessment_studio.css');"
+            " css('ilog-neis-plan-import-style','neis_plan_import.css');"
+            " css('ilog-assessment-export-style','assessment_export.css');"
+            " js('ilog-warm-dashboard-script','dashboard_warm.js');"
+            " js('ilog-classroom-warm-script','classroom_warm.js');"
+            " js('ilog-academic-warm-script','academic_warm.js');"
+            " js('ilog-workdesk-warm-script','workdesk_warm.js');"
+            " js('ilog-assessment-studio-script','assessment_studio.js');"
+            " js('ilog-neis-plan-import-script','neis_plan_import.js');"
+            " js('ilog-assessment-export-script','assessment_export.js');"
+            " return true;"
+            "})()"
+        )
     except Exception:
         pass
 
 
 def _startup(window) -> None:
-    _install_reload_hook(window)
     _apply_theme(window)
     if SELFTEST:
         _selftest(window)
@@ -144,8 +110,7 @@ def _selftest(window) -> None:
             "calendar: typeof FullCalendar !== 'undefined',"
             "bridge: typeof Bridge !== 'undefined',"
             "desktop: !!(window.pywebview && window.pywebview.api),"
-            "statusFn: !!(window.pywebview && window.pywebview.api && typeof window.pywebview.api.status === 'function'),"
-            "upgradedUi: !!document.getElementById('ilog-assessment-studio-script')"
+            "statusFn: !!(window.pywebview && window.pywebview.api && typeof window.pywebview.api.status === 'function')"
             "})"
         )
         for _ in range(60):
@@ -154,7 +119,7 @@ def _selftest(window) -> None:
                 if raw:
                     page = json.loads(raw) if isinstance(raw, str) else raw
                     result["page"] = page
-                    if page.get("bootstrap") and page.get("calendar") and page.get("bridge") and page.get("desktop") and page.get("statusFn") and page.get("upgradedUi"):
+                    if page.get("bootstrap") and page.get("calendar") and page.get("bridge") and page.get("desktop") and page.get("statusFn"):
                         break
             except Exception as e:
                 result["lastError"] = str(e)
@@ -206,7 +171,6 @@ def _selftest(window) -> None:
             and page.get("bridge")
             and page.get("desktop")
             and page.get("statusFn")
-            and page.get("upgradedUi")
             and api_ok
             and result.get("hwpx")
         )
