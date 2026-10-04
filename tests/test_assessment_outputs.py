@@ -13,6 +13,7 @@ def _api(tmp_path):
     assert db.unlock("1234")
     api = Api(db)
     api.db_put("settings", {"id": "global", "schoolYear": "2026", "schoolName": "테스트초", "grade": "5", "classNo": "1", "teacherName": "홍길동"})
+    api.db_put("settings", {"id": "class_curriculum_2026_5_1", "classVision": "함께 성장하는 학급"})
     api.db_put("assessment_plans", {
         "planId": "assess_out", "subjectName": "과학", "subjectShort": "과", "term": 1,
         "unit": "3. 날씨와 우리 생활", "date": "2026-06-08", "title": "날씨 자료 분석 수행평가",
@@ -64,16 +65,21 @@ def test_class_book_includes_assessment_plan_in_xlsx_and_html(tmp_path):
     try:
         x = api.build_file("class_book_xlsx", {})
         wb = load_workbook(io.BytesIO(base64.b64decode(x["b64"])), data_only=True)
+        assert "학급교육과정개요" in wb.sheetnames
         assert "과목별편성시간" in wb.sheetnames
         assert "주간과목별시수" in wb.sheetnames
         assert "월간과목별시수" in wb.sheetnames
         assert "수행평가계획" in wb.sheetnames
+        overview = "\n".join(str(c.value or "") for row in wb["학급교육과정개요"].iter_rows() for c in row)
+        assert "함께 성장하는 학급" in overview
         ws = wb["수행평가계획"]
         values = "\n".join(str(c.value or "") for row in ws.iter_rows() for c in row)
         assert "날씨 자료 분석 수행평가" in values
         assert "잘함: 근거를 들어 정확히 설명함" in values
 
         h = api.build_html("class_book", {})["html"]
+        assert "학급교육과정 종합관리" in h
+        assert "함께 성장하는 학급" in h
         assert "2. 과목별 편성·계획·이수 시간" in h
         assert "3. 주간 과목별 시수" in h
         assert "4. 월간 과목별 시수" in h
