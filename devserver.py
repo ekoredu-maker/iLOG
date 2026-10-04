@@ -57,6 +57,7 @@ class Handler(SimpleHTTPRequestHandler):
                     '<script src="assessment_export.js" id="ilog-assessment-export-script" defer></script>',
                     '<script src="instruction_hours.js" id="ilog-instruction-hours-script" defer></script>',
                     '<script src="curriculum_management.js" id="ilog-curriculum-management-script" defer></script>',
+                    '<script src="curriculum_polish.js" id="ilog-curriculum-polish-script" defer></script>',
                 ]
                 missing = [r for r in resources if r not in html]
                 if missing:
