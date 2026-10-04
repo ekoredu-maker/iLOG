@@ -1,0 +1,41 @@
+/* 교육과정 편성·계획·이수 시수 */
+#instruction-hours-panel {
+  border: 1px solid rgba(97, 82, 71, .12);
+  border-radius: 22px;
+  overflow: hidden;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 10px 28px rgba(91, 74, 61, .08);
+}
+#instruction-hours-panel .ih-head {
+  padding: 18px 20px 14px;
+  background: linear-gradient(135deg, #fff8e7 0%, #fff0ed 52%, #edf8f3 100%);
+  border-bottom: 1px solid rgba(97,82,71,.1);
+}
+#instruction-hours-panel .ih-title { font-size: 1.08rem; font-weight: 800; color: #51453d; }
+#instruction-hours-panel .ih-desc { color: #7b6d63; font-size: .83rem; line-height: 1.55; }
+#instruction-hours-panel .ih-actions { display:flex; gap:8px; flex-wrap:wrap; }
+#instruction-hours-panel .ih-summary {
+  display:grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap:10px; padding:14px 18px 4px;
+}
+#instruction-hours-panel .ih-chip { padding:10px 12px; border-radius:15px; background:#faf8f5; border:1px solid #eee7df; }
+#instruction-hours-panel .ih-chip small { display:block; color:#8b7b70; font-size:.72rem; }
+#instruction-hours-panel .ih-chip strong { display:block; margin-top:2px; color:#4d433c; font-size:1.02rem; }
+#instruction-hours-panel .ih-table-wrap { overflow:auto; padding:12px 18px 4px; }
+#instruction-hours-panel table { min-width:860px; margin-bottom:8px; }
+#instruction-hours-panel th { white-space:nowrap; font-size:.78rem; color:#675a51; background:#fbf8f4; }
+#instruction-hours-panel td { vertical-align:middle; font-size:.84rem; }
+#instruction-hours-panel .ih-plan-input { width:92px; text-align:center; border-radius:10px; }
+#instruction-hours-panel .ih-ok { color:#2f7d5c; font-weight:700; }
+#instruction-hours-panel .ih-warn { color:#b25b47; font-weight:700; }
+#instruction-hours-panel .ih-muted { color:#9b8e84; }
+#instruction-hours-panel details { margin: 8px 18px 16px; border:1px solid #eee7df; border-radius:14px; background:#fffdfa; }
+#instruction-hours-panel summary { cursor:pointer; padding:11px 14px; font-weight:700; color:#66584f; }
+#instruction-hours-panel .ih-subtable { overflow:auto; padding:0 12px 12px; }
+#instruction-hours-panel .ih-foot { padding:0 18px 16px; color:#897b71; font-size:.76rem; line-height:1.5; }
+#annual-stats { display:none !important; }
+@media (max-width: 900px) {
+  #instruction-hours-panel .ih-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media print {
+  #instruction-hours-panel .ih-actions, #instruction-hours-panel details { display:none !important; }
+}
