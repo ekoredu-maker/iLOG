@@ -15,7 +15,9 @@ def test_instruction_hours_assets_exist_and_are_served():
     assert "instruction_hours_" in js
     assert "#annual-stats" in css
     assert "학급교육과정 종합관리" in cm_js
-    assert "과목설정에 등록한 <b>모든 과목</b>" in cm_js
+    assert "과목설정의 <b>모든 과목</b>" in cm_js
+    assert "실제 이수 관리 시작" in cm_js
+    assert "학급교육과정 HWPX" in cm_js
     assert "curriculum-management-panel" in cm_css
     assert "instruction_hours.css" in server
     assert "instruction_hours.js" in server
