@@ -1,15 +1,21 @@
-"""교육과정 편성·이수 시수 집계.
+"""교육과정 편성·지도·평가·이수 종합 집계.
 
 국가수준 교육과정의 시간 배당 기준은 학년군(2년) 기준으로 관리하고,
-학교가 정한 당해 학년 편성시수와 iLOG 연간 시간표에서 계산한 계획·이수시수를
-서로 분리하여 비교한다.
+학교가 정한 당해 학년 편성시수와 iLOG의 과목설정·연간지도계획·평가계획을
+같은 과목 축으로 연결하여 비교한다.
 
+핵심 원칙
 - 국가 기준: 2022 개정 교육과정 초등학교 학년군별 시간 배당 기준
 - 학교 편성: settings/instruction_hours_<학년도>_<학년> 에 교사가 입력
 - 연간 계획: annual_schedule 전체 수업 칸 수
+- 지도내용: annual_schedule 중 단원/목표/내용이 입력된 차시 수
+- 평가: eval_plans / assessment_plans 를 과목별로 연결
 - 현재 이수: 기준일(as_of)까지의 annual_schedule 수업 칸 수
+- 학급교육과정 기록: settings/class_curriculum_<학년도>_<학년>_<반>
 
-연간 지도계획을 수정/이동/삭제하면 annual_schedule 자체가 바뀌므로 집계도 즉시 바뀐다.
+과목설정에 등록된 과목은 시수가 0이어도 모두 집계 대상으로 남긴다.
+연간 지도계획을 수정/이동/삭제하면 같은 annual_schedule을 기준으로 집계하므로
+편성·지도·주간·월간 시수가 즉시 함께 바뀐다.
 """
 from __future__ import annotations
 
@@ -80,6 +86,13 @@ def plan_key(settings: dict) -> str:
     return f"instruction_hours_{year}_{grade}"
 
 
+def class_record_key(settings: dict) -> str:
+    year = _int(settings.get("schoolYear"), date.today().year)
+    grade = _int(settings.get("grade"), 0)
+    class_no = str(settings.get("classNo") or "0").strip() or "0"
+    return f"class_curriculum_{year}_{grade}_{class_no}"
+
+
 def load_plan(db: Database) -> dict:
     settings = db.get("settings", "global") or {}
     rec = db.get("settings", plan_key(settings)) or {}
@@ -89,6 +102,26 @@ def load_plan(db: Database) -> dict:
         "grade": _int(settings.get("grade"), 0),
         "schoolPlan": rec.get("schoolPlan") or {},
         "note": rec.get("note") or "",
+    }
+
+
+def load_class_record(db: Database) -> dict:
+    settings = db.get("settings", "global") or {}
+    key = class_record_key(settings)
+    rec = db.get("settings", key) or {}
+    return {
+        "id": key,
+        "classVision": rec.get("classVision") or "",
+        "classGoals": rec.get("classGoals") or "",
+        "focus": rec.get("focus") or "",
+        "studentProfile": rec.get("studentProfile") or "",
+        "curriculumPrinciples": rec.get("curriculumPrinciples") or "",
+        "creativeActivities": rec.get("creativeActivities") or "",
+        "schoolAutonomy": rec.get("schoolAutonomy") or "",
+        "crossCurricular": rec.get("crossCurricular") or "",
+        "assessmentPolicy": rec.get("assessmentPolicy") or "",
+        "reflection": rec.get("reflection") or "",
+        "changes": rec.get("changes") or "",
     }
 
 
@@ -121,17 +154,49 @@ def subject_group(subject_name: str, grade) -> str:
     return subject_name
 
 
-def _active_subjects(db: Database, school_plan: dict) -> list[dict]:
-    subjects = db.get_all("subjects")
-    annual = db.get_all("annual_schedule")
-    used = {str(t.get("name") or "") for d in annual for t in (d.get("subjects") or [])}
+def _configured_subjects(db: Database) -> list[dict]:
+    """과목설정에 등록된 과목 전체를 반환한다.
+
+    기존에는 연간시간표에 실제 등장하거나 편성시수가 입력된 과목만 남겨
+    1학년에서 국어·수학만 보이는 문제가 발생할 수 있었다. 종합관리에서는
+    과목설정 자체가 기준 목록이므로 0시간 과목도 유지한다.
+    """
     out = []
-    for s in subjects:
-        name, short = str(s.get("name") or ""), str(s.get("shortName") or "")
-        planned = _int(school_plan.get(name, school_plan.get(short, 0)))
-        if short in used or name in used or planned:
+    for s in db.get_all("subjects"):
+        if str(s.get("name") or s.get("shortName") or "").strip():
             out.append(s)
     return out
+
+
+def _subject_index(subjects: list[dict]) -> dict[str, dict]:
+    idx: dict[str, dict] = {}
+    for s in subjects:
+        for value in (s.get("subjectId"), s.get("name"), s.get("shortName")):
+            key = _norm(value)
+            if key:
+                idx.setdefault(key, s)
+    return idx
+
+
+def _resolve_subject(value, idx: dict[str, dict]) -> dict | None:
+    return idx.get(_norm(value))
+
+
+def _evaluation_counts(db: Database, subjects: list[dict]) -> tuple[dict, dict]:
+    idx = _subject_index(subjects)
+    legacy = defaultdict(int)
+    performance = defaultdict(int)
+    for p in db.get_all("eval_plans"):
+        s = _resolve_subject(p.get("subjectId"), idx) or _resolve_subject(p.get("subjectName"), idx)
+        if s:
+            legacy[str(s.get("subjectId") or s.get("shortName") or s.get("name"))] += 1
+    for p in db.get_all("assessment_plans"):
+        s = (_resolve_subject(p.get("subjectId"), idx)
+             or _resolve_subject(p.get("subjectName"), idx)
+             or _resolve_subject(p.get("subjectShort"), idx))
+        if s:
+            performance[str(s.get("subjectId") or s.get("shortName") or s.get("name"))] += 1
+    return legacy, performance
 
 
 def subject_rows(db: Database, as_of: str | None = None) -> list[dict]:
@@ -139,34 +204,57 @@ def subject_rows(db: Database, as_of: str | None = None) -> list[dict]:
     plan = load_plan(db)
     school_plan = plan["schoolPlan"]
     as_of = as_of or date.today().isoformat()
-    counts = defaultdict(lambda: {"t1": 0, "t2": 0, "other": 0, "scheduled": 0, "completed": 0})
+    subjects = _configured_subjects(db)
+    idx = _subject_index(subjects)
+    counts = defaultdict(lambda: {
+        "t1": 0, "t2": 0, "other": 0, "scheduled": 0, "completed": 0,
+        "contentLessons": 0,
+    })
+
     for day in db.get_all("annual_schedule"):
         d = str(day.get("date") or "")
         term = _term_of(settings, d)
         for lesson in day.get("subjects") or []:
-            short = str(lesson.get("name") or "")
-            c = counts[short]
+            s = (_resolve_subject(lesson.get("subjectId"), idx)
+                 or _resolve_subject(lesson.get("name"), idx)
+                 or _resolve_subject(lesson.get("subjectName"), idx)
+                 or _resolve_subject(lesson.get("subjectShort"), idx))
+            if not s:
+                continue
+            skey = str(s.get("subjectId") or s.get("shortName") or s.get("name"))
+            c = counts[skey]
             c["scheduled"] += 1
             if d and d <= as_of:
                 c["completed"] += 1
             if term == 1: c["t1"] += 1
             elif term == 2: c["t2"] += 1
             else: c["other"] += 1
+            if any(str(lesson.get(k) or "").strip() for k in ("unit", "objective", "content", "standard")):
+                c["contentLessons"] += 1
+
+    eval_counts, assessment_counts = _evaluation_counts(db, subjects)
     rows = []
-    for s in _active_subjects(db, school_plan):
+    for s in subjects:
         name = str(s.get("name") or "")
         short = str(s.get("shortName") or name)
-        c = counts[short]
+        skey = str(s.get("subjectId") or short or name)
+        c = counts[skey]
         school = school_plan.get(name, school_plan.get(short, ""))
         school_i = _int(school, 0) if str(school).strip() != "" else None
         diff = (c["scheduled"] - school_i) if school_i is not None else None
+        coverage = round((c["contentLessons"] / c["scheduled"] * 100), 1) if c["scheduled"] else 0
         rows.append({
+            "subjectId": s.get("subjectId"),
             "name": name, "short": short,
             "schoolPlan": school_i,
             "t1": c["t1"], "t2": c["t2"], "other": c["other"],
             "scheduled": c["scheduled"], "completed": c["completed"],
             "remaining": max(c["scheduled"] - c["completed"], 0),
             "diff": diff,
+            "contentLessons": c["contentLessons"],
+            "contentCoverage": coverage,
+            "evalPlans": eval_counts.get(skey, 0),
+            "assessmentPlans": assessment_counts.get(skey, 0),
             "group": subject_group(name, settings.get("grade")),
         })
     return rows
@@ -208,10 +296,14 @@ def national_rows(db: Database, as_of: str | None = None) -> list[dict]:
 
 
 def _period_rows(db: Database, mode: str) -> dict:
-    """주/월별 과목 시수. 반환: {subjects:[...], rows:[...]}."""
-    plan = load_plan(db)
-    active = _active_subjects(db, plan["schoolPlan"])
-    subjects = [(str(s.get("shortName") or s.get("name") or ""), str(s.get("name") or s.get("shortName") or "")) for s in active]
+    """주/월별 과목 시수. 과목설정 전체를 열로 유지한다."""
+    subjects_cfg = _configured_subjects(db)
+    idx = _subject_index(subjects_cfg)
+    subjects = [
+        (str(s.get("subjectId") or s.get("shortName") or s.get("name") or ""),
+         str(s.get("name") or s.get("shortName") or ""))
+        for s in subjects_cfg
+    ]
     data = defaultdict(lambda: defaultdict(int))
     date_meta = {}
     for day in db.get_all("annual_schedule"):
@@ -233,12 +325,19 @@ def _period_rows(db: Database, mode: str) -> dict:
             key = f"{iso.year:04d}-W{iso.week:02d}"
             date_meta[key] = {"label": f"{iso.week}주", "start": monday.isoformat(), "end": friday.isoformat()}
         for lesson in day.get("subjects") or []:
-            data[key][str(lesson.get("name") or "")] += 1
+            s = (_resolve_subject(lesson.get("subjectId"), idx)
+                 or _resolve_subject(lesson.get("name"), idx)
+                 or _resolve_subject(lesson.get("subjectName"), idx)
+                 or _resolve_subject(lesson.get("subjectShort"), idx))
+            if not s:
+                continue
+            skey = str(s.get("subjectId") or s.get("shortName") or s.get("name") or "")
+            data[key][skey] += 1
     rows = []
     for key in sorted(data):
-        vals = [data[key].get(short, 0) for short, _ in subjects]
+        vals = [data[key].get(skey, 0) for skey, _ in subjects]
         rows.append({"key": key, **date_meta[key], "values": vals, "total": sum(vals)})
-    return {"subjects": [name for _, name in subjects], "shorts": [short for short, _ in subjects], "rows": rows}
+    return {"subjects": [name for _, name in subjects], "keys": [skey for skey, _ in subjects], "rows": rows}
 
 
 def weekly_rows(db: Database) -> dict:
@@ -257,6 +356,7 @@ def snapshot(db: Database, as_of: str | None = None) -> dict:
         "band": grade_band(settings.get("grade")),
         "asOf": as_of or date.today().isoformat(),
         "plan": load_plan(db),
+        "classRecord": load_class_record(db),
         "national": national_rows(db, as_of),
         "subjects": subject_rows(db, as_of),
         "weekly": weekly_rows(db),
