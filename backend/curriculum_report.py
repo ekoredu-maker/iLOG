@@ -143,9 +143,10 @@ def class_curriculum_hwpx(db: Database) -> tuple[str, bytes]:
             b.para("연간시간표에 배치된 차시가 없습니다.", size=10, color="#666666")
             continue
         table = [["날짜", "교시", "차시", "영역", "단원·주제", "성취기준", "학습목표", "지도내용", "실시"]] + rows
-        b.table(table, [20, 10, 10, 20, 28, 45, 45, 48, 16], header_rows=1,
+        # A4 본문 폭 170mm 안에서 고정하여 한글에서 열었을 때 표가 잘리지 않게 한다.
+        b.table(table, [17, 8, 8, 13, 21, 28, 30, 32, 13], header_rows=1,
                 align=["CENTER", "CENTER", "CENTER", "LEFT", "LEFT", "LEFT", "LEFT", "LEFT", "CENTER"],
-                size=7.2, min_height_mm=5)
+                size=6.9, min_height_mm=5)
 
     # 5. 수행평가·교과평가 계획
     b.title("5. 교수·학습 및 평가 계획", size=15, page_break=True, after=4)
@@ -155,8 +156,8 @@ def class_curriculum_hwpx(db: Database) -> tuple[str, bytes]:
         erows.append([p.get("subjectName") or p.get("subjectShort") or "", p.get("term") or "", p.get("unit") or "", p.get("title") or "", p.get("date") or "", p.get("domain") or "", p.get("method") or "", p.get("standard") or "", p.get("objective") or ""])
     if len(erows) == 1:
         erows.append(["", "", "", "등록된 수행평가 계획 없음", "", "", "", "", ""])
-    b.table(erows, [20, 10, 28, 30, 18, 18, 20, 55, 55], header_rows=1,
-            align=["CENTER", "CENTER", "LEFT", "LEFT", "CENTER", "CENTER", "CENTER", "LEFT", "LEFT"], size=7.5, min_height_mm=6)
+    b.table(erows, [16, 8, 20, 22, 14, 14, 16, 30, 30], header_rows=1,
+            align=["CENTER", "CENTER", "LEFT", "LEFT", "CENTER", "CENTER", "CENTER", "LEFT", "LEFT"], size=7.1, min_height_mm=6)
 
     b.para("※ 본 문서는 iLOG에 저장된 학교 편성시수·연간지도계획·평가계획·수업 실시상태를 바탕으로 자동 작성되었습니다. 최종 결재·보관 전 학교교육과정 및 해당 학년도 지침과 대조하세요.", size=8.2, color="#666666", before=6, after=0, line=130)
 
