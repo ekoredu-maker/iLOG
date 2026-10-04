@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import sys
 import threading
 import traceback
@@ -17,12 +18,14 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from backend.api import APP_VERSION, Api
+from backend.curriculum_batch import apply_national_batch
 from backend.db import Database
 from devserver import Handler
 
 
 SELFTEST = os.environ.get("ILOG_SELFTEST")
 _UI_FAILURE: Exception | None = None
+_SINGLE_INSTANCE_HANDLE = None
 
 
 def resource_dir() -> Path:
@@ -37,6 +40,78 @@ def _write_startup_log(db: Database, message: str) -> None:
             f.write(message.rstrip() + "\n")
     except Exception:
         pass
+
+
+def _write_runtime_log(data_dir: Path, title: str, exc: Exception) -> None:
+    try:
+        log_dir = data_dir / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        with (log_dir / "runtime.log").open("a", encoding="utf-8") as f:
+            f.write(f"\n=== {title} ===\n")
+            f.write("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+    except Exception:
+        pass
+
+
+def _acquire_single_instance() -> bool:
+    """Windows 배포본이 같은 DB를 두 프로세스에서 동시에 열지 않도록 막는다."""
+    global _SINGLE_INSTANCE_HANDLE
+    if sys.platform != "win32" or SELFTEST:
+        return True
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.CreateMutexW(None, False, "Local\\iLOG_Desktop_SingleInstance_v10")
+        if not handle:
+            return True
+        if kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+            kernel32.CloseHandle(handle)
+            ctypes.windll.user32.MessageBoxW(
+                None,
+                "iLOG가 이미 실행 중입니다.\n\n"
+                "기존 iLOG 창을 먼저 확인해 주세요. 프로그램이 멈춘 경우에는 작업 관리자에서 "
+                "iLOG.exe를 종료한 뒤 다시 실행하세요.",
+                "아이로그 iLOG",
+                0x40,
+            )
+            return False
+        _SINGLE_INSTANCE_HANDLE = handle
+        return True
+    except Exception:
+        # 뮤텍스 생성 실패가 프로그램 실행 자체를 막지는 않게 한다.
+        return True
+
+
+def _release_single_instance() -> None:
+    global _SINGLE_INSTANCE_HANDLE
+    if sys.platform == "win32" and _SINGLE_INSTANCE_HANDLE:
+        try:
+            import ctypes
+            ctypes.windll.kernel32.CloseHandle(_SINGLE_INSTANCE_HANDLE)
+        except Exception:
+            pass
+        _SINGLE_INSTANCE_HANDLE = None
+
+
+class DesktopApi(Api):
+    """데스크톱에서 큰 파일/대량 데이터를 JS 왕복 없이 처리하는 빠른 경로."""
+
+    def curriculum_apply_national_batch(self, grade, subjects, overwrite=False):
+        try:
+            return apply_national_batch(self._db, self._lib, grade, subjects, bool(overwrite))
+        except Exception as e:
+            _write_runtime_log(self._db.data_dir, "national curriculum batch", e)
+            raise
+
+    def build_and_save_file(self, kind, params=None):
+        """파일을 Python 안에서 생성→저장한다. 큰 HWPX의 base64 JS 왕복을 피한다."""
+        try:
+            built = self.build_file(kind, params or {})
+            return self.save_file(built["filename"], built["b64"], True)
+        except Exception as e:
+            _write_runtime_log(self._db.data_dir, f"build and save: {kind}", e)
+            raise
 
 
 def _start_ui_server(base: Path):
@@ -134,17 +209,32 @@ def _check_normal_ui(window) -> None:
 
 
 def main() -> None:
+    if not _acquire_single_instance():
+        return
+
     import webview  # type: ignore
 
     global _UI_FAILURE
     _UI_FAILURE = None
     base = resource_dir()
-    db = Database()
+    db = None
     httpd = None
 
     try:
+        try:
+            db = Database()
+        except sqlite3.OperationalError as e:
+            if "locked" in str(e).lower():
+                _fatal(
+                    "iLOG 데이터베이스가 다른 실행 중인 iLOG에 의해 사용 중입니다.\n\n"
+                    "기존 iLOG 창을 종료한 뒤 다시 실행해 주세요. 창이 보이지 않으면 작업 관리자에서 "
+                    "iLOG.exe를 모두 종료한 뒤 다시 실행하세요."
+                )
+                return
+            raise
+
         httpd, url = _start_ui_server(base)
-        api = Api(db, base / "curriculum_packs", desktop=True)
+        api = DesktopApi(db, base / "curriculum_packs", desktop=True)
         window = webview.create_window(
             f"아이로그 iLOG v{APP_VERSION}",
             url,
@@ -188,7 +278,12 @@ def main() -> None:
                 httpd.server_close()
             except Exception:
                 pass
-        db.close()
+        if db is not None:
+            try:
+                db.close()
+            except Exception:
+                pass
+        _release_single_instance()
 
 
 def _startup(window) -> None:
