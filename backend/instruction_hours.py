@@ -62,6 +62,14 @@ def execution_key(settings: dict) -> str:
     return f"lesson_execution_{year}_{grade}_{class_no}"
 
 
+def subject_order_key(settings: dict) -> str:
+    """화면에서 정한 담임 개설과목 순서를 출력·집계에서도 그대로 사용한다."""
+    year = _int(settings.get("schoolYear"), date.today().year)
+    grade = _int(settings.get("grade"), 0)
+    class_no = str(settings.get("classNo") or "0").strip() or "0"
+    return f"subject_order_{year}_{grade}_{class_no}"
+
+
 def load_plan(db: Database) -> dict:
     settings = db.get("settings", "global") or {}
     rec = db.get("settings", plan_key(settings)) or {}
@@ -132,7 +140,19 @@ def subject_group(subject_name: str, grade) -> str:
 
 
 def _configured_subjects(db: Database) -> list[dict]:
-    return [s for s in db.get_all("subjects") if str(s.get("name") or s.get("shortName") or "").strip()]
+    subjects = [s for s in db.get_all("subjects") if str(s.get("name") or s.get("shortName") or "").strip()]
+    settings = db.get("settings", "global") or {}
+    order_rec = db.get("settings", subject_order_key(settings)) or {}
+    order = [str(v) for v in (order_rec.get("order") or [])]
+    if not order:
+        return subjects
+    rank = {sid: i for i, sid in enumerate(order)}
+    raw_rank = {str(s.get("subjectId") or ""): i for i, s in enumerate(subjects)}
+    subjects.sort(key=lambda s: rank.get(
+        str(s.get("subjectId") or ""),
+        len(order) + raw_rank.get(str(s.get("subjectId") or ""), 0),
+    ))
+    return subjects
 
 
 def _subject_index(subjects: list[dict]) -> dict[str, dict]:
@@ -312,7 +332,7 @@ def _period_rows(db: Database, mode: str) -> dict:
             friday = monday + timedelta(days=4)
             iso = parsed.isocalendar()
             key = f"{iso.year:04d}-W{iso.week:02d}"
-            date_meta[key] = {"label": f"{iso.week}주", "start": monday.isoformat(), "end": friday.isoformat()}
+            date_meta[key] = {"label": "", "start": monday.isoformat(), "end": friday.isoformat()}
         for lesson in day.get("subjects") or []:
             subject = _resolve_lesson_subject(lesson, idx)
             if not subject:
@@ -323,6 +343,9 @@ def _period_rows(db: Database, mode: str) -> dict:
     for key in sorted(data):
         values = [data[key].get(skey, 0) for skey, _ in subjects]
         rows.append({"key": key, **date_meta[key], "values": values, "total": sum(values)})
+    if mode == "week":
+        for i, row in enumerate(rows, 1):
+            row["label"] = f"제{i}주"
     return {"subjects": [name for _, name in subjects], "keys": [skey for skey, _ in subjects], "rows": rows}
 
 
