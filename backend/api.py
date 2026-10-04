@@ -19,17 +19,21 @@ from . import forms
 from . import reports
 from . import assessment_reports
 from . import class_book_assessment
+from . import curriculum_report
 from .hwpx_builder import inspect_template
 from .curriculum import CurriculumLibrary
 from .db import Database, StoreError, new_id
 from .excel_io import make_template, normalize_date, read_rows_b64
 
-APP_VERSION = "10.3.0"
+APP_VERSION = "10.4.0"
 
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 HWPX_MIME = "application/hwp+zip"
 DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-KEEP_FIELDS = ("unit", "objective", "content", "crossTags", "crossNote", "lessonSeq", "planSource")
+KEEP_FIELDS = (
+    "domain", "unit", "objective", "content", "standard", "page",
+    "crossTags", "crossNote", "lessonSeq", "planSource", "planSourceFile", "planImportedAt",
+)
 
 
 def _b64(data: bytes) -> str:
@@ -400,6 +404,9 @@ class Api:
         if kind == "class_book_xlsx":
             data = class_book_assessment.class_book_xlsx(self._db, bool(params.get("incidents")))
             return {"filename": f"학급경영록_{ts}.xlsx", "b64": _b64(data), "mime": XLSX_MIME}
+        if kind == "class_curriculum_hwpx":
+            name, data = curriculum_report.class_curriculum_hwpx(self._db)
+            return {"filename": _safe_filename(name), "b64": _b64(data), "mime": HWPX_MIME}
         if kind == "assessment_plan_hwpx":
             name, data = assessment_reports.assessment_plan_hwpx(self._db, params["planId"])
             return {"filename": _safe_filename(name), "b64": _b64(data), "mime": HWPX_MIME}
