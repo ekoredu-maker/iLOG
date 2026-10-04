@@ -47,6 +47,7 @@ class Handler(SimpleHTTPRequestHandler):
                     '<link rel="stylesheet" href="neis_plan_import.css" id="ilog-neis-plan-import-style">',
                     '<link rel="stylesheet" href="assessment_export.css" id="ilog-assessment-export-style">',
                     '<link rel="stylesheet" href="instruction_hours.css" id="ilog-instruction-hours-style">',
+                    '<link rel="stylesheet" href="curriculum_management.css" id="ilog-curriculum-management-style">',
                     '<script src="dashboard_warm.js" id="ilog-warm-dashboard-script" defer></script>',
                     '<script src="classroom_warm.js" id="ilog-classroom-warm-script" defer></script>',
                     '<script src="academic_warm.js" id="ilog-academic-warm-script" defer></script>',
@@ -55,6 +56,7 @@ class Handler(SimpleHTTPRequestHandler):
                     '<script src="neis_plan_import.js" id="ilog-neis-plan-import-script" defer></script>',
                     '<script src="assessment_export.js" id="ilog-assessment-export-script" defer></script>',
                     '<script src="instruction_hours.js" id="ilog-instruction-hours-script" defer></script>',
+                    '<script src="curriculum_management.js" id="ilog-curriculum-management-script" defer></script>',
                 ]
                 missing = [r for r in resources if r not in html]
                 if missing:
