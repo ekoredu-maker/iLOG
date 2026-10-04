@@ -1,11 +1,11 @@
-"""출판사별 지도계획 라이브러리.
+"""지도계획 라이브러리.
 
-데이터팩 1개 = (학년, 과목, 출판사, 교육과정) 1조합의 차시별 지도계획.
-- 프로그램에 함께 들어있는 팩: curriculum_packs/*.json (읽기 전용)
-- 교사가 엑셀로 가져온 팩: DB 의 curriculum_packs 테이블
+데이터팩 1개 = (학년, 과목, 출처/출판사, 교육과정) 1조합의 지도계획.
+- 프로그램 기본 탑재: curriculum_packs/*.json + 국가수준 기본안
+- 교사가 엑셀/JSON으로 가져온 팩: DB curriculum_packs
 
-적용(apply) 하면 연간 시간표에서 해당 과목 칸을 날짜·교시 순으로 찾아
-1학기 차시는 1학기 칸에, 2학기 차시는 2학기 칸에 차례대로 채운다.
+일반 팩은 차시를 1:1로 배치하고, `adaptive=True`인 국가수준 기본안은
+실제 연간시간표의 해당 과목 차시 수에 맞춰 영역·주제를 자동 확장한다.
 """
 from __future__ import annotations
 
@@ -14,18 +14,22 @@ import re
 from pathlib import Path
 
 from .db import Database, StoreError
+from .national_curriculum import national_packs
 
 PACK_FORMAT = "ilog-curriculum/1"
+PHASES = ("개념·경험 알아보기", "탐구·연습하기", "문제 해결·표현하기", "적용·성찰하기")
 
 HEADER_ALIASES = {
     "grade": ["학년"],
     "subject": ["과목", "교과", "과목명"],
-    "publisher": ["출판사", "발행사", "교과서"],
+    "publisher": ["출판사", "발행사", "교과서", "출처"],
     "semester": ["학기"],
     "seq": ["차시", "순서", "차시번호"],
+    "domain": ["영역", "교육과정영역"],
     "unit": ["단원", "지도단원", "지도 단원", "단원명"],
     "objective": ["학습목표", "학습 목표", "목표"],
     "content": ["지도내용", "지도 내용", "학습주제", "지도내용(학습주제)", "내용", "활동"],
+    "standard": ["성취기준", "성취 기준"],
     "curriculum": ["교육과정"],
     "page": ["쪽수", "교과서쪽수", "쪽"],
 }
@@ -74,15 +78,17 @@ def validate_pack(pack: dict) -> dict:
     if grade is None or not 1 <= grade <= 6:
         raise StoreError(f"학년 값이 올바르지 않습니다: {pack['grade']}")
     clean = []
-    for i, l in enumerate(lessons):
-        sem = _int(l.get("semester"))
+    for i, lesson in enumerate(lessons):
+        sem = _int(lesson.get("semester"))
         clean.append({
             "semester": sem if sem in (1, 2) else None,
-            "seq": _int(l.get("seq"), i + 1),
-            "unit": str(l.get("unit") or "").strip(),
-            "objective": str(l.get("objective") or "").strip(),
-            "content": str(l.get("content") or "").strip(),
-            "page": str(l.get("page") or "").strip(),
+            "seq": _int(lesson.get("seq"), i + 1),
+            "domain": str(lesson.get("domain") or "").strip(),
+            "unit": str(lesson.get("unit") or "").strip(),
+            "objective": str(lesson.get("objective") or "").strip(),
+            "content": str(lesson.get("content") or "").strip(),
+            "standard": str(lesson.get("standard") or "").strip(),
+            "page": str(lesson.get("page") or "").strip(),
         })
     clean.sort(key=lambda x: (x["semester"] or 0, x["seq"]))
     curriculum = str(pack.get("curriculum") or "").strip()
@@ -94,6 +100,7 @@ def validate_pack(pack: dict) -> dict:
         "curriculum": curriculum,
         "source": str(pack.get("source") or "").strip(),
         "note": str(pack.get("note") or "").strip(),
+        "adaptive": bool(pack.get("adaptive")),
         "lessons": clean,
     }
     out["packId"] = pack.get("packId") or make_pack_id(grade, out["subject"], out["publisher"], curriculum)
@@ -122,22 +129,27 @@ def packs_from_rows(rows: list[list]) -> list[dict]:
     for row in rows[1:]:
         if not row or all(v in ("", None) for v in row):
             continue
-        grade, subject, publisher = cell(row, "grade"), str(cell(row, "subject")).strip(), str(cell(row, "publisher")).strip()
+        grade = cell(row, "grade")
+        subject = str(cell(row, "subject")).strip()
+        publisher = str(cell(row, "publisher")).strip()
         if not (grade and subject and publisher):
             continue
         curriculum = str(cell(row, "curriculum") or "").strip()
         key = (str(grade), subject, publisher, curriculum)
-        g = groups.setdefault(key, {"grade": grade, "subject": subject, "publisher": publisher,
-                                    "curriculum": curriculum, "lessons": []})
+        group = groups.setdefault(key, {
+            "grade": grade, "subject": subject, "publisher": publisher,
+            "curriculum": curriculum, "lessons": []
+        })
         for seq in _expand_seq(cell(row, "seq")):
-            g["lessons"].append({
+            group["lessons"].append({
                 "semester": cell(row, "semester"), "seq": seq,
-                "unit": cell(row, "unit"), "objective": cell(row, "objective"),
-                "content": cell(row, "content"), "page": cell(row, "page"),
+                "domain": cell(row, "domain"), "unit": cell(row, "unit"),
+                "objective": cell(row, "objective"), "content": cell(row, "content"),
+                "standard": cell(row, "standard"), "page": cell(row, "page"),
             })
     if not groups:
         raise StoreError("가져올 차시가 없습니다. 학년·과목·출판사·차시 칸을 확인해 주세요.")
-    return [validate_pack(g) for g in groups.values()]
+    return [validate_pack(group) for group in groups.values()]
 
 
 def summarize(pack: dict, builtin: bool) -> dict:
@@ -146,6 +158,7 @@ def summarize(pack: dict, builtin: bool) -> dict:
         "packId": pack["packId"], "grade": pack["grade"], "subject": pack["subject"],
         "publisher": pack["publisher"], "curriculum": pack.get("curriculum", ""),
         "source": pack.get("source", ""), "note": pack.get("note", ""), "builtin": builtin,
+        "adaptive": bool(pack.get("adaptive")),
         "lessonCount": len(lessons),
         "term1": sum(1 for l in lessons if l.get("semester") == 1),
         "term2": sum(1 for l in lessons if l.get("semester") == 2),
@@ -160,29 +173,35 @@ class CurriculumLibrary:
     # ---------------------------------------------------------------- 조회
     def _builtin_packs(self) -> list[dict]:
         packs = []
+        # 저작권과 출판사에 독립적인 국가수준 기본안을 항상 먼저 제공한다.
+        for pack in national_packs():
+            try:
+                packs.append(validate_pack(pack))
+            except Exception as exc:
+                print(f"[curriculum] 국가수준 기본안 건너뜀: {exc}")
         if self.builtin_dir and self.builtin_dir.is_dir():
-            for f in sorted(self.builtin_dir.glob("*.json")):
+            for file in sorted(self.builtin_dir.glob("*.json")):
                 try:
-                    data = json.loads(f.read_text(encoding="utf-8"))
+                    data = json.loads(file.read_text(encoding="utf-8"))
                     items = data if isinstance(data, list) else [data]
-                    packs.extend(validate_pack(p) for p in items)
-                except Exception as e:  # 잘못된 팩 하나 때문에 전체가 멈추지 않도록
-                    print(f"[curriculum] {f.name} 건너뜀: {e}")
+                    packs.extend(validate_pack(pack) for pack in items)
+                except Exception as exc:
+                    print(f"[curriculum] {file.name} 건너뜀: {exc}")
         return packs
 
     def all_packs(self) -> dict[str, tuple[dict, bool]]:
         out: dict[str, tuple[dict, bool]] = {}
-        for p in self._builtin_packs():
-            out[p["packId"]] = (p, True)
-        for p in self.db.list_user_packs():
-            out[p["packId"]] = (p, False)  # 교사가 가져온 팩이 같은 ID면 우선
+        for pack in self._builtin_packs():
+            out[pack["packId"]] = (pack, True)
+        for pack in self.db.list_user_packs():
+            out[pack["packId"]] = (pack, False)  # 교사가 가져온 팩이 같은 ID면 우선
         return out
 
     def list(self, grade: int | None = None) -> list[dict]:
-        items = [summarize(p, b) for p, b in self.all_packs().values()]
+        items = [summarize(pack, builtin) for pack, builtin in self.all_packs().values()]
         if grade:
-            items = [i for i in items if i["grade"] == int(grade)]
-        items.sort(key=lambda i: (i["grade"], i["subject"], i["publisher"]))
+            items = [item for item in items if item["grade"] == int(grade)]
+        items.sort(key=lambda item: (item["grade"], item["subject"], 0 if item.get("adaptive") else 1, item["publisher"]))
         return items
 
     def get(self, pack_id: str) -> dict:
@@ -194,18 +213,18 @@ class CurriculumLibrary:
     # ------------------------------------------------------------ 가져오기
     def import_rows(self, rows: list[list]) -> list[dict]:
         packs = packs_from_rows(rows)
-        for p in packs:
-            self.db.save_user_pack(p)
-        return [summarize(p, False) for p in packs]
+        for pack in packs:
+            self.db.save_user_pack(pack)
+        return [summarize(pack, False) for pack in packs]
 
     def import_json(self, data) -> list[dict]:
         if isinstance(data, str):
             data = json.loads(data)
         items = data if isinstance(data, list) else [data]
-        packs = [validate_pack(p) for p in items]
-        for p in packs:
-            self.db.save_user_pack(p)
-        return [summarize(p, False) for p in packs]
+        packs = [validate_pack(pack) for pack in items]
+        for pack in packs:
+            self.db.save_user_pack(pack)
+        return [summarize(pack, False) for pack in packs]
 
     def delete(self, pack_id: str) -> bool:
         return self.db.delete_user_pack(pack_id)
@@ -228,79 +247,115 @@ class CurriculumLibrary:
     # ------------------------------------------------------- 배치 계산
     def _slots(self, subject_short: str):
         settings = self.db.get("settings", "global") or {}
-        t1 = (settings.get("term1Start") or "", settings.get("term1End") or "")
-        t2 = (settings.get("term2Start") or "", settings.get("term2End") or "")
-        days = sorted(self.db.get_all("annual_schedule"), key=lambda d: d.get("date", ""))
+        term1_range = (settings.get("term1Start") or "", settings.get("term1End") or "")
+        term2_range = (settings.get("term2Start") or "", settings.get("term2End") or "")
+        days = sorted(self.db.get_all("annual_schedule"), key=lambda day: day.get("date", ""))
         term1, term2, other = [], [], []
         for day in days:
-            d = day.get("date", "")
-            for s in sorted(day.get("subjects") or [], key=lambda x: x.get("period", 0)):
-                if s.get("name") != subject_short:
+            day_str = day.get("date", "")
+            for lesson in sorted(day.get("subjects") or [], key=lambda x: x.get("period", 0)):
+                if lesson.get("name") != subject_short:
                     continue
-                slot = (d, s.get("period"))
-                if t1[0] and t1[1] and t1[0] <= d <= t1[1]:
+                slot = (day_str, lesson.get("period"))
+                if term1_range[0] and term1_range[1] and term1_range[0] <= day_str <= term1_range[1]:
                     term1.append(slot)
-                elif t2[0] and t2[1] and t2[0] <= d <= t2[1]:
+                elif term2_range[0] and term2_range[1] and term2_range[0] <= day_str <= term2_range[1]:
                     term2.append(slot)
                 else:
                     other.append(slot)
         return term1, term2, other
 
+    def _adaptive_lessons(self, templates: list[dict], count: int) -> list[dict]:
+        """소수의 국가수준 주제를 실제 차시 수만큼 고르게 확장한다."""
+        if count <= 0 or not templates:
+            return []
+        out = []
+        for i in range(count):
+            idx = min(len(templates) - 1, int(i * len(templates) / count))
+            base = dict(templates[idx])
+            phase = PHASES[i % len(PHASES)]
+            topic = base.get("unit") or base.get("content") or base.get("objective") or "기본 학습"
+            base["seq"] = i + 1
+            base["content"] = f"{topic} - {phase}"
+            out.append(base)
+        return out
+
     def _plan(self, pack: dict, subject_short: str):
         term1, term2, other = self._slots(subject_short)
         lessons = pack["lessons"]
-        has_sem = any(l.get("semester") for l in lessons)
         assignments = []  # (slot, lesson)
-        if has_sem:
-            l1 = [l for l in lessons if l.get("semester") in (1, None)]
-            l2 = [l for l in lessons if l.get("semester") == 2]
-            groups = [("1학기", term1, l1), ("2학기", term2, l2)]
+        summary = []
+
+        if pack.get("adaptive"):
+            slots = term1 + term2 + other
+            expanded = self._adaptive_lessons(lessons, len(slots))
+            assignments.extend(zip(slots, expanded))
+            offset = 0
+            for label, group_slots in (("1학기", term1), ("2학기", term2), ("기타", other)):
+                if not group_slots:
+                    continue
+                n = len(group_slots)
+                summary.append({"term": label, "slots": n, "lessons": n, "applied": n, "emptySlots": 0, "leftLessons": 0})
+                offset += n
+            return assignments, summary
+
+        has_semester = any(lesson.get("semester") for lesson in lessons)
+        if has_semester:
+            lesson1 = [lesson for lesson in lessons if lesson.get("semester") in (1, None)]
+            lesson2 = [lesson for lesson in lessons if lesson.get("semester") == 2]
+            groups = [("1학기", term1, lesson1), ("2학기", term2, lesson2)]
         else:
             groups = [("전체", term1 + term2 + other, lessons)]
-        summary = []
-        for label, slots, ls in groups:
-            n = min(len(slots), len(ls))
-            assignments.extend(zip(slots[:n], ls[:n]))
-            summary.append({"term": label, "slots": len(slots), "lessons": len(ls),
-                            "applied": n, "emptySlots": len(slots) - n, "leftLessons": len(ls) - n})
+        for label, slots, group_lessons in groups:
+            n = min(len(slots), len(group_lessons))
+            assignments.extend(zip(slots[:n], group_lessons[:n]))
+            summary.append({
+                "term": label, "slots": len(slots), "lessons": len(group_lessons),
+                "applied": n, "emptySlots": len(slots) - n, "leftLessons": len(group_lessons) - n
+            })
         return assignments, summary
 
     def preview(self, pack_id: str, subject_short: str) -> dict:
-        pack = self.get(pack_id)
+        found = self.all_packs().get(pack_id)
+        if not found:
+            raise StoreError("지도계획 데이터를 찾을 수 없습니다.")
+        pack, builtin = found
         _, summary = self._plan(pack, subject_short)
-        return {"pack": summarize(pack, False), "subject": subject_short, "terms": summary}
+        return {"pack": summarize(pack, builtin), "subject": subject_short, "terms": summary}
 
     def apply(self, pack_id: str, subject_short: str, overwrite: bool = True) -> dict:
-        """연간 시간표의 해당 과목 칸에 차시 내용을 채운다.
-
-        overwrite=False 이면 이미 내용이 입력된 칸은 건드리지 않는다
-        (차시 순서는 그대로 유지되므로 해당 차시는 건너뛴다).
-        """
+        """연간 시간표의 해당 과목 칸에 지도내용을 채운다."""
         pack = self.get(pack_id)
         assignments, summary = self._plan(pack, subject_short)
         by_date: dict[str, dict] = {}
         changed = skipped = 0
-        for (d, period), lesson in assignments:
-            day = by_date.get(d) or self.db.get("annual_schedule", d)
+        for (day_str, period), lesson in assignments:
+            day = by_date.get(day_str) or self.db.get("annual_schedule", day_str)
             if not day:
                 continue
-            by_date[d] = day
-            for s in day.get("subjects") or []:
-                if s.get("period") == period and s.get("name") == subject_short:
-                    if not overwrite and (s.get("unit") or s.get("objective") or s.get("content")):
+            by_date[day_str] = day
+            for target in day.get("subjects") or []:
+                if target.get("period") == period and target.get("name") == subject_short:
+                    if not overwrite and (target.get("unit") or target.get("objective") or target.get("content")):
                         skipped += 1
                         break
-                    s["unit"] = lesson["unit"]
-                    s["objective"] = lesson["objective"]
-                    s["content"] = lesson["content"] or lesson["objective"] or lesson["unit"]
-                    s["lessonSeq"] = lesson["seq"]
-                    s["planSource"] = pack["packId"]
-                    s.setdefault("crossTags", [])
-                    s.setdefault("crossNote", "")
+                    target["domain"] = lesson.get("domain") or ""
+                    target["unit"] = lesson.get("unit") or ""
+                    target["objective"] = lesson.get("objective") or ""
+                    target["content"] = lesson.get("content") or lesson.get("objective") or lesson.get("unit") or ""
+                    target["standard"] = lesson.get("standard") or ""
+                    target["page"] = lesson.get("page") or ""
+                    target["lessonSeq"] = lesson.get("seq")
+                    target["planSource"] = pack["packId"]
+                    target.setdefault("crossTags", [])
+                    target.setdefault("crossNote", "")
                     changed += 1
                     break
         if by_date:
             self.db.put_many("annual_schedule", list(by_date.values()))
         self.set_choice(subject_short, pack_id)
-        return {"applied": changed, "skipped": skipped, "terms": summary,
-                "publisher": pack["publisher"], "subject": pack["subject"]}
+        return {
+            "applied": changed, "skipped": skipped, "terms": summary,
+            "publisher": pack["publisher"], "subject": pack["subject"],
+            "adaptive": bool(pack.get("adaptive")),
+        }
