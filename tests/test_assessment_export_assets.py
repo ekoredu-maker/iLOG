@@ -12,6 +12,7 @@ def test_assessment_export_assets_are_wired():
     assert "assessment_plan_hwpx" in js
     assert "assessment_plans_hwpx" in js
     assert "class_book_xlsx" in js
-    assert "assessment_export.css" in main and "assessment_export.js" in main
+    # 데스크톱은 main.py가 devserver.Handler를 통해 같은 최신 UI를 제공한다.
+    assert "from devserver import Handler" in main
     assert "assessment_export.css" in dev and "assessment_export.js" in dev
     assert ".ilog-assessment-export-bar" in css
