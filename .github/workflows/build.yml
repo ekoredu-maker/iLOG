@@ -5,7 +5,7 @@ permissions:
 
 on:
   push:
-    tags: ['v*']          # v10.1.0 같은 태그를 올리면 릴리스까지 자동 생성
+    tags: ['v*']          # v10.4.0 같은 태그를 올리면 릴리스까지 자동 생성
   workflow_dispatch:      # Actions 탭에서 수동 실행
 
 jobs:
@@ -19,47 +19,75 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: 패키지 설치
         run: python -m pip install -r requirements-dev.txt
+
       - name: 백엔드 테스트
         run: python -m pytest -q
+
       - name: 화면 자동 점검 (E2E)
         run: |
           python -m playwright install chromium
           python tests/e2e_ui.py e2e-output
-      - name: exe 빌드 (1개 / 폴더형)
+
+      # 단일 exe(one-file)는 브라우저/백신의 휴리스틱 오탐이 상대적으로 잦다.
+      # 배포는 폴더형만 사용하고, artifact 바깥에는 exe를 직접 노출하지 않는다.
+      - name: 포터블 폴더형 빌드
         run: |
-          python -m PyInstaller --noconfirm --clean iLOG.spec
           python -m PyInstaller --noconfirm --clean iLOG_folder.spec
-          Compress-Archive -Force -Path dist\iLOG\* -DestinationPath dist\iLOG_folder.zip
-      - name: 실행 점검 (실제 창을 띄워 화면·파이썬 연결 확인)
+          Compress-Archive -Force -Path dist\iLOG\* -DestinationPath dist\iLOG_portable.zip
+          $hash = (Get-FileHash dist\iLOG_portable.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  iLOG_portable.zip" | Out-File -FilePath dist\SHA256SUMS.txt -Encoding ascii
+          Write-Host "SHA256: $hash"
+
+      - name: 실행 점검 (실제 창·파이썬·HWPX)
         run: |
-          foreach ($exe in @("dist\iLOG\iLOG.exe", "dist\iLOG.exe")) {
-            $out = Join-Path $env:RUNNER_TEMP ("selftest_" + [IO.Path]::GetFileNameWithoutExtension((Split-Path $exe -Parent) + "x") + ".json")
-            $env:ILOG_SELFTEST = $out
-            $env:ILOG_DATA_DIR = Join-Path $env:RUNNER_TEMP ("ilogdata_" + [guid]::NewGuid())
-            $p = Start-Process $exe -PassThru
-            if (-not $p.WaitForExit(180000)) { Stop-Process -Id $p.Id -Force; Write-Error "$exe : 시간 초과"; exit 1 }
-            if (-not (Test-Path $out)) { Write-Error "$exe : 점검 결과 없음"; exit 1 }
-            $r = Get-Content $out -Raw -Encoding utf8
-            Write-Host "$exe => $r"
-            if (-not ($r | ConvertFrom-Json).ok) { Write-Error "$exe : 점검 실패"; exit 1 }
+          $exe = "dist\iLOG\iLOG.exe"
+          $out = Join-Path $env:RUNNER_TEMP "selftest_folder.json"
+          $env:ILOG_SELFTEST = $out
+          $env:ILOG_DATA_DIR = Join-Path $env:RUNNER_TEMP ("ilogdata_" + [guid]::NewGuid())
+          $p = Start-Process $exe -PassThru
+          if (-not $p.WaitForExit(180000)) { Stop-Process -Id $p.Id -Force; Write-Error "$exe : 시간 초과"; exit 1 }
+          if (-not (Test-Path $out)) { Write-Error "$exe : 점검 결과 없음"; exit 1 }
+          $r = Get-Content $out -Raw -Encoding utf8
+          Write-Host "$exe => $r"
+          if (-not ($r | ConvertFrom-Json).ok) { Write-Error "$exe : 점검 실패"; exit 1 }
+
+      - name: Windows Defender 점검 정보
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "$env:ProgramFiles\Windows Defender\MpCmdRun.exe",
+            "$env:ProgramData\Microsoft\Windows Defender\Platform\*\MpCmdRun.exe"
+          )
+          $mp = Get-Item $candidates -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1
+          if ($mp) {
+            & $mp.FullName -Scan -ScanType 3 -File (Resolve-Path "dist\iLOG")
+            Write-Host "Defender scan exit code: $LASTEXITCODE"
+          } else {
+            Write-Host "GitHub runner에서 Windows Defender CLI를 찾지 못해 이 단계는 정보 확인만 하고 통과합니다."
           }
+
+      # GitHub artifact의 최상위에는 exe를 넣지 않는다.
+      # 사용자는 artifact ZIP을 풀고, 그 안의 iLOG_portable.zip을 다시 풀어 사용한다.
       - uses: actions/upload-artifact@v4
         with:
-          name: iLOG-windows
+          name: iLOG-portable-windows
           path: |
-            dist/iLOG.exe
-            dist/iLOG_folder.zip
+            dist/iLOG_portable.zip
+            dist/SHA256SUMS.txt
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-screenshots
           path: e2e-output
+
       - name: 릴리스 첨부
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/iLOG.exe
-            dist/iLOG_folder.zip
+            dist/iLOG_portable.zip
+            dist/SHA256SUMS.txt
